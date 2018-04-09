@@ -1,7 +1,6 @@
 # graph-db
 Implementation of Graph DB engine
 
-
 ## Plan
 ### Overall description
 We build a graph db engine. In graph there will be _edges_ and _nodes_.
@@ -34,7 +33,7 @@ Helps to find the first byte of a node in NODES file i.e. stores mapping `node_i
 Stores node attributes. Layout can be like
 ```
 +------------+--------------+-------------+------------------+--------------+-----+
-| num_fields | field_1_type | field_1_len | field_1_contents | field_2_type | ... 
+| num_fields  | field_1_type  | field_1_len  | field_1_contents  | field_2_type  | ... 
 +------------+--------------+-------------+------------------+--------------+-----+
 ```
 
@@ -42,7 +41,7 @@ Stores node attributes. Layout can be like
 Function                               | Returns | Description
 ---------------------------------------|---------|-----------------------------------
 `save_node(n)`                         | `nid`   | Save node to disk and return it's id
-`find_node(nid)`                       | `n`     | Find node by id
+`find_node(nid)`                        | `n`     | Find node by id
 `save_edge(frm_nid, to_nid, edge_nid)` | `eid`   | Save edge and return it's id
 `remove_edge(eid)`                     | Nothing | Delete edge by edge id
 `all_node_ids()`                       | `[nid]` | List of all node ids
