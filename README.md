@@ -17,7 +17,6 @@ Type    | Size (Bytes) | Description
 `INT`   | 4            | Signed integer number
 `UINT`  | 4            | Unsigned integer number (not available for user?)
 `FLOAT` | 4            | Single precision floating point number
-`CHAR`  | 4            | UTF-8 character (not available for user?)
 `TEXT`  | Varying      | Sequence of `CHAR`s long as needed. Like SQL `VARCHAR`
 
 On low level edges do not store attributes in them, but create a special node in which
@@ -74,7 +73,8 @@ There are 4 files: NODES file, NODE\_IDS file, EDGES file, EDGE\_IDS file.
 ###### NODES file
 The most important file where nodes and properties are stored.
 
-NODES contains a sequence of `node` blocks. `node` blocks have this structure:
+NODES contains a `UINT` number `cur_node_addr` which is the address of the free space to write to.
+Then there is a sequence of `node` blocks. `node` blocks have this structure:
 
 Size/Type | Short name   | Description
 ----------|--------------|------------
@@ -106,7 +106,7 @@ Any non-negative | `TEXT` of length `val_desc`
 ###### NODE\_IDS file
 Maps node IDs to their address in NODES file
 
-NODE\_IDS contains an `INT` value `cur_nid` the first free id. After `cur_nid` there
+NODE\_IDS contains an `INT` value `cur_node_id` the first free id. After `cur_node_id` there
 is a sequence of `INT`s, i-th storing the address of node with `nid = i` in NODES file.
 
 ###### EDGE\_IDS file
