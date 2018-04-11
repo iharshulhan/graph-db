@@ -45,9 +45,9 @@ Edges are dictionaries:
 ```
 e = {
     'eid': 322,
-    fnid: 120,  # From node id
-    tnid: 122,  # To node id
-    enid: 400,  # Edge properties node id
+    'fnid': 120,  # From node id
+    'tnid': 122,  # To node id
+    'enid': 400,  # Edge properties node id
     'props': {
         'color': 'red'
     }
