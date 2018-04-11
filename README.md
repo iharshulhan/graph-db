@@ -32,18 +32,25 @@ Even better if we use operator `is` (how?).
 Nodes are dictionaries:
 ```
 n = {
-    opts: {[option_key, options_value]},  # For special data
-    props: {[property_key, property_value]}  # For properties
+    'is_edge': False,
+    'id': 123,
+    'props': {
+        'name': 'vasea',
+        'country': 'UA'
+    }
 }
 ```
 
 Edges are dictionaries:
 ```
 e = {
-    fnid: int,  # From node id
-    tnid: int,  # To node id
-    enid: int,  # Edge properties node id
-    opts: {[option_key, options_value]}  # For special data
+    'eid': 322,
+    fnid: 120,  # From node id
+    tnid: 122,  # To node id
+    enid: 400,  # Edge properties node id
+    'props': {
+        'color': 'red'
+    }
 }
 ```
 
@@ -73,8 +80,6 @@ Size/Type | Short name   | Description
 ----------|--------------|------------
 `UINT`    | `rec_len`    | Record length in bytes
 `BOOL`    | `is_edge`    | Is this a node to store edge properties? See EDGES file
-`UINT`    | `from_edge`  | Address of the first edge from this node in EDGES file. 0 if `is_edge`
-`UINT`    | `to_edge`    | Address of the first edge to this node in EDGES file. 0 if `is_edge`
 `UINT`    | `num_props`  | How many properties are stored in this node?
 Depends on `num_props` | `props`      | Sequence of `prop` blocks
 
