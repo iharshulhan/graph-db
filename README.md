@@ -17,7 +17,7 @@ Type    | Size (Bytes) | Description
 `INT`   | 4            | Signed integer number
 `UINT`  | 4            | Unsigned integer number (not available for user?)
 `FLOAT` | 4            | Single precision floating point number
-`CHAR`  | 4            | UTF-8 character
+`CHAR`  | 4            | UTF-8 character (not available for user?)
 `TEXT`  | Varying      | Sequence of `CHAR`s long as needed. Like SQL `VARCHAR`
 
 On low level edges do not store attributes in them, but create a special node in which
