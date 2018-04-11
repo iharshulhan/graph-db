@@ -15,7 +15,7 @@ Type    | Size (Bytes) | Description
 --------|--------------|----------------------------------------------------------
 `BOOL`  | 1            | True/False boolean value. 0 for False, else True
 `INT`   | 4            | Signed integer number
-`UINT`  | 4            | Unsigned integer number
+`UINT`  | 4            | Unsigned integer number (not available for user?)
 `FLOAT` | 4            | Single precision floating point number
 `CHAR`  | 4            | UTF-8 character
 `TEXT`  | Varying      | Sequence of `CHAR`s long as needed. Like SQL `VARCHAR`
