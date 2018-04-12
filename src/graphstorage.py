@@ -1,6 +1,6 @@
-from itertools import repeat
 import mmap
 import struct
+from itertools import repeat
 from typing import Any, Dict, NewType, Tuple
 
 Node = NewType('Node', Dict)
@@ -24,7 +24,7 @@ class GraphStorage:
     SIZE_UINT = 4
     SIZE_FLOAT = 4
 
-    # For serializing property values
+    # val_desc possible values
     TYPE_BOOL = -1
     TYPE_INT = -2
     TYPE_UINT = -3
@@ -65,65 +65,18 @@ class GraphStorage:
         self._edge_ids_mmap = mmap.mmap(self._edge_ids_file.fileno(), 0)
 
         if new:
-            self._node_ids_mmap[0:self.SIZE_UINT] = self._pack_int(1)
-            self._node_ids_mmap.flush()
-            self._edge_ids_mmap[0:self.SIZE_UINT] = self._pack_int(1)
-            self._edge_ids_mmap.flush()
-            self._nodes_mmap[0:self.SIZE_UINT] = self._pack_uint(1)
-            self._edges_mmap[0:self.SIZE_UINT] = self._pack_uint(1)
+            self._write_cur_node_addr(NodeAddress(1))
+            self._write_cur_node_id(NodeId(1))
 
     def _pack_node(self, node: Node) -> bytes:
         ans = self._pack_bool(node['is_edge'])
-        ans += self._pack_uint(len(node['props']))
+        ans += self._pack_uint(Uint(len(node['props'])))
         for k, v in node['props'].items():
             ans += self._pack_text(k)
             ans += self._pack_value(v)
 
         # prepend len of resulting ans
-        ans = self._pack_uint(self.SIZE_UINT + len(ans)) + ans
-        return ans
-
-    def _unpack_node(self, b: bytes) -> Node:
-        cur = 0
-        after = self.SIZE_UINT
-        rec_len = self._unpack_uint(b[cur:after])
-        cur = self.SIZE_UINT  # skip rec_len
-        after = self.SIZE_UINT + self.SIZE_BOOL
-        is_edge = self._unpack_bool(b[cur:after])
-        cur, after = after, after + self.SIZE_UINT
-        num_props = self._unpack_uint(b[cur:after])
-        ans: Node = Node({})
-        ans['is_edge'] = is_edge
-        ans['props'] = {}
-        for _ in range(num_props):
-            cur, after = after, after + self.SIZE_UINT
-            k_len = self._unpack_uint(b[cur:after])
-            cur, after = after, after + k_len
-            k = self._unpack_text_bytes(b[cur:after])
-            cur, after = after, after + self.SIZE_INT
-            val_desc = self._unpack_int(b[cur:after])
-            val: Any = None
-            if val_desc >= 0:
-                # This is TEXT
-                cur, after = after, after + self.SIZE_INT
-                val_len = self._unpack_int(b[cur:after])
-                cur, after = after, after + val_len
-                val = self._unpack_text_bytes(b[cur:after])
-            elif val_desc == self.TYPE_BOOL:
-                cur, after = after, after + self.SIZE_BOOL
-                val = self._unpack_bool(b[cur:after])
-            elif val_desc == self.TYPE_FLOAT:
-                cur, after = after, after + self.SIZE_FLOAT
-                val = self._unpack_float(b[cur:after])
-            elif val_desc == self.TYPE_INT:
-                cur, after = after, after + self.SIZE_INT
-                val = self._unpack_int(b[cur:after])
-            elif val_desc == self.TYPE_UINT:
-                cur, after = after, after + self.SIZE_UINT
-                val = self._unpack_uint(b[cur:after])
-            else:
-                raise Exception('Unknown val_desc ' + str(val_desc))
-            ans['props'][k] = val
+        ans = self._pack_uint(Uint(self.SIZE_UINT + len(ans))) + ans
         return ans
 
     def _pack_value(self, x: Any) -> bytes:
@@ -281,8 +234,10 @@ class GraphStorage:
     def _node_from(self, naddr: NodeAddress) -> Node:
         ans: Node = Node({})
         cur: NodeAddress = naddr
-        _, cur = self._uint_from_nodes(cur)  # skip rec_len
+        rec_len, cur = self._uint_from_nodes(cur)
         ans['is_edge'], cur = self._bool_from_nodes(cur)
+        ans['node_addr'] = naddr
+        ans['rec_len'] = rec_len
         ans['props'] = {}
         num_props, cur = self._uint_from_nodes(cur)
         for _ in repeat(None, num_props):
@@ -293,7 +248,34 @@ class GraphStorage:
 
     def get_node(self, nid: NodeId) -> Node:
         node_addr = self._addr_of_node(nid)
+        if node_addr == 0:
+            return None
         return self._node_from(node_addr)
+
+    def _packed_node_to_nodes(self, packed: bytes,
+                              cur: NodeAddress) -> NodeAddress:
+        m = self._nodes_mmap
+        t = NodeAddress(cur + len(packed))
+        m[cur:t] = packed
+        return t
+
+    def update_node(self, nid: NodeId, n: Node) -> None:
+        old_addr = self._addr_of_node(nid)
+        node = self._node_from(old_addr)
+        if node is None:
+            raise Exception('Updating a non-existing node nid=' + str(nid))
+        packed = self._pack_node(n)
+        new_rec_len = len(packed)
+        old_rec_len = node['rec_len']
+        if new_rec_len == old_rec_len:
+            self._packed_node_to_nodes(packed, old_addr)
+        else:
+            cur_node = self._cur_node_addr()
+            cur_next_node = self._packed_node_to_nodes(packed, cur_node)
+            self._write_cur_node_addr(cur_next_node)
+
+    def delete_node(self, nid: NodeId) -> None:
+        self._map_node_id_to_node_addr(nid, NodeAddress(0))
 
     def close(self):
         self._nodes_mmap.close()
