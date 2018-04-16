@@ -29,6 +29,89 @@ class GraphStorageTest(unittest.TestCase):
         self.assertEqual(node['props'], node2['props'])
         self.assertEqual(node['is_edge'], node2['is_edge'])
 
+    def test_edge_creation_and_getting(self):
+        node = Node({
+            'is_edge': False,
+            'props': {
+                'a': 1,
+                'b': 2,
+                'c': 3
+            }
+        })
+        other_node = Node({
+            'is_edge': False,
+            'props': {
+                'useless': True
+            }
+        })
+        edge_props = Node({
+            'is_edge': True,
+            'props': {
+                'an_int': 2,
+                'unicode': 'салəм',
+                'float': 1.25,  # 1.25 represents well in binary
+                'bool_true': True,
+                'bool_false': False,
+                'char_z': 'z',
+                'text_hello': 'hello'
+            }
+        })
+
+        nid = self.storage.create_node(node)
+        other_nid = self.storage.create_node(other_node)
+        edge_nid = self.storage.create_node(edge_props)
+
+        edge_id = self.storage.create_edge(nid, other_nid, edge_nid)
+        edge = self.storage.get_edge(edge_id)
+        self.assertEqual(nid, edge['fnid'])
+        self.assertEqual(other_nid, edge['tnid'])
+        self.assertEqual(edge_props['props'], edge['props'])
+
+    def test_deleting_edge(self):
+        node = Node({
+            'is_edge': False,
+            'props': {
+                'a': 1,
+                'b': 2,
+                'c': 3
+            }
+        })
+        other_node = Node({
+            'is_edge': False,
+            'props': {
+                'useless': True
+            }
+        })
+        edge_props_1 = Node({
+            'is_edge': True,
+            'props': {
+                'text_hello': 'hello'
+            }
+        })
+        edge_props_2 = Node({
+            'is_edge': True,
+            'props': {
+                'an_int': 2
+            }
+        })
+        edge_props_3 = Node({
+            'is_edge': True,
+            'props': {
+                'unicode': 'салəм'
+            }
+        })
+        nid = self.storage.create_node(node)
+        other_nid = self.storage.create_node(other_node)
+        edge_nid = self.storage.create_node(edge_props_1)
+        edge_1 = self.storage.create_edge(nid, other_nid, edge_nid)
+        edge_nid = self.storage.create_node(edge_props_2)
+        edge_2 = self.storage.create_edge(nid, other_nid, edge_nid)
+        edge_nid = self.storage.create_node(edge_props_3)
+        edge_3 = self.storage.create_edge(nid, other_nid, edge_nid)
+        self.assertEqual(len(self.storage.edges_from(nid)), 3)
+        self.storage.remove_edge(edge_2)
+        self.assertEqual(len(self.storage.edges_from(nid)), 2)
+
     def test_node_none_on_non_existent_nid(self):
         self.assertIsNone(self.storage.get_node(NodeId(123)),
                           'Should be None if no node with such id')

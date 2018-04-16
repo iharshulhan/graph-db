@@ -43,10 +43,8 @@ n = {
 Edges are dictionaries:
 ```
 e = {
-    'eid': 322,
     'fnid': 120,  # From node id
     'tnid': 122,  # To node id
-    'enid': 400,  # Edge properties node id
     'props': {
         'color': 'red'
     }
@@ -68,7 +66,7 @@ Abbreviation | Description
 ##### Files
 Byte order everywhere is **big-endian** aka **network order**.
 
-There are 4 files: NODES file, NODE\_IDS file, EDGES file, EDGE\_IDS file.
+There are 3 files: NODES file, NODE\_IDS file, EDGE\_IDS file.
 
 ###### NODES file
 The most important file where nodes and properties are stored.
@@ -107,27 +105,33 @@ Any non-negative | `TEXT` of length `val_desc`
 Maps node IDs to their address in NODES file
 
 NODE\_IDS contains an `INT` value `cur_node_id` the first free id. After `cur_node_id` there
-is a sequence of `INT`s, i-th storing the address of node with `nid = i` in NODES file.
-
-###### EDGE\_IDS file
-Similar to NODE\_IDS file.
-
-Maps edge IDs to their address in EDGES file
-
-EDGES\_IDS contains an `INT` value `cur_eid` the first free id. After `cur_eid` there
-is a sequence of `INT`s, i-th storing the address of edge with `eid = i` in EDGES file.
-
-###### EDGES file
-Edges are directed connections between two nodes. Properties of an edge are stored
-in a special _edge node_ (NODES file record will have `is_edge` set to True).
-
-EDGES file is a sequence of `edge` blocks. `edge` blocks have this structure:
+is a sequence of blocks. Block represents one node and has this structure: 
 
 Size/Type | Short Name  | Description
 ----------|-------------|------------
-`UINT`    | `edge_nid`  | Edge node ID
+`UINT`    | `naddr`     | Pointer to property block in Nodes file
+`UINT`    | `edge_from` | First edge from node 
+`UINT`    | `edge_to`   | First edge to node
+
+###### EDGE\_IDS file
+
+Edges are directed connections between two nodes. Properties of an edge are stored
+in a special _edge node_
+
+EDGES\_IDS contains an `INT` value `cur_eid` the first free id. After `cur_eid` there
+is a sequence of `edge` blocks. `edge` blocks have this structure:
+
+Size/Type | Short Name  | Description
+----------|-------------|------------
 `UINT`    | `from_nid`  | Edge source node ID
 `UINT`    | `to_nid`    | Edge destination node ID
+`UINT`    | `prev_1`    | Previous relationship ID for the start node
+`UINT`    | `next_1`    | Next relationship ID for the start node
+`UINT`    | `prev_2`    | Previous relationship ID for the end node
+`UINT`    | `next_2`    | Next relationship ID for the end node
+`UINT`    | `props_addr`| Pointer to property block in Nodes file
+
+
 
 ##### Implementation details
 Nodes can be created, updated, deleted.
