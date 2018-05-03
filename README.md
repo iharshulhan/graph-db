@@ -9,7 +9,7 @@ Nodes have many _properties_ (key-value pairs)
 Edges connect pairs of nodes, are directional, there can be loops (`x->x`).
 Edges can also have _properties_ (key-value pairs).
 
-Property keys are always `TEXT` (`INT`?). Values can be of different types.
+Property keys are always `TEXT`. Values can be of different types.
 
 Type    | Size (Bytes) | Description
 --------|--------------|----------------------------------------------------------
@@ -31,7 +31,6 @@ Even better if we use operator `is` (how?).
 Nodes are dictionaries:
 ```
 n = {
-    'is_edge': False,
     'id': 123,
     'props': {
         'name': 'vasea',
@@ -43,24 +42,13 @@ n = {
 Edges are dictionaries:
 ```
 e = {
-    'fnid': 120,  # From node id
-    'tnid': 122,  # To node id
+    'from_node_id': 120,  # This edge is from node 120
+    'to_node_id': 122,  # This edge is to node 122
     'props': {
         'color': 'red'
     }
 }
 ```
-
-### Common abbreviations
-
-Abbreviation | Description
--------------|------------
-`n`          | In code represents a Node object. Can be prefixed by something
-`nid`        | Node id (see `n`)
-`fnid`       | From Node ID (see `nid`). Used when talking about edges
-`tnid`       | To Node ID (see `nid`). Used when talking about edges
-`enid`       | Edge Properties Node ID (see `nid`). The ID of a node for storing
-
 
 #### Saving to disk
 ##### Files
@@ -77,7 +65,6 @@ Then there is a sequence of `node` blocks. `node` blocks have this structure:
 Size/Type | Short name   | Description
 ----------|--------------|------------
 `UINT`    | `rec_len`    | Record length in bytes
-`BOOL`    | `is_edge`    | Is this a node to store edge properties? See EDGES file
 `UINT`    | `num_props`  | How many properties are stored in this node?
 Depends on `num_props` | `props`      | Sequence of `prop` blocks
 
@@ -88,7 +75,7 @@ Size/Type | Short name   | Description
 `UINT`    | `key_strlen` | How many characters in this property key
 `key_strlen` of `CHAR`s | `key_chars` | Key characters
 `INT`     | `val_desc`   | Describes length and type of the value. See below
-Depends on `val_len` | `val` | Value of this property
+Depends on `val_desc` | `val` | Value of this property
 
 `val_desc` describes type and length of a value.
 
@@ -116,7 +103,7 @@ Size/Type | Short Name  | Description
 ###### EDGE\_IDS file
 
 Edges are directed connections between two nodes. Properties of an edge are stored
-in a special _edge node_
+in EDGES file.
 
 EDGES\_IDS contains an `INT` value `cur_eid` the first free id. After `cur_eid` there
 is a sequence of `edge` blocks. `edge` blocks have this structure:
@@ -129,7 +116,7 @@ Size/Type | Short Name  | Description
 `UINT`    | `next_1`    | Next relationship ID for the start node
 `UINT`    | `prev_2`    | Previous relationship ID for the end node
 `UINT`    | `next_2`    | Next relationship ID for the end node
-`UINT`    | `props_addr`| Pointer to property block in Nodes file
+`UINT`    | `props_addr`| Pointer to property block in EDGES file
 
 
 
