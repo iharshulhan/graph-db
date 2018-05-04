@@ -12,7 +12,6 @@ class GraphStorageTest(unittest.TestCase):
 
     def test_node_creation_and_getting(self):
         node = Node({
-            'is_edge': False,
             'props': {
                 'an_int': 2,
                 'unicode': 'салəм',
@@ -27,11 +26,9 @@ class GraphStorageTest(unittest.TestCase):
         nid = self.storage.create_node(node)
         node2 = self.storage.get_node(nid)
         self.assertEqual(node['props'], node2['props'])
-        self.assertEqual(node['is_edge'], node2['is_edge'])
 
     def test_edge_creation_and_getting(self):
         node = Node({
-            'is_edge': False,
             'props': {
                 'a': 1,
                 'b': 2,
@@ -39,13 +36,11 @@ class GraphStorageTest(unittest.TestCase):
             }
         })
         other_node = Node({
-            'is_edge': False,
             'props': {
                 'useless': True
             }
         })
         edge_props = Node({
-            'is_edge': True,
             'props': {
                 'an_int': 2,
                 'unicode': 'салəм',
@@ -69,7 +64,6 @@ class GraphStorageTest(unittest.TestCase):
 
     def test_deleting_edge(self):
         node = Node({
-            'is_edge': False,
             'props': {
                 'a': 1,
                 'b': 2,
@@ -77,25 +71,21 @@ class GraphStorageTest(unittest.TestCase):
             }
         })
         other_node = Node({
-            'is_edge': False,
             'props': {
                 'useless': True
             }
         })
         edge_props_1 = Node({
-            'is_edge': True,
             'props': {
                 'text_hello': 'hello'
             }
         })
         edge_props_2 = Node({
-            'is_edge': True,
             'props': {
                 'an_int': 2
             }
         })
         edge_props_3 = Node({
-            'is_edge': True,
             'props': {
                 'unicode': 'салəм'
             }
@@ -118,7 +108,6 @@ class GraphStorageTest(unittest.TestCase):
 
     def test_node_updating_with_same_length(self):
         node = Node({
-            'is_edge': False,
             'props': {
                 'a': 1,
                 'b': 2,
@@ -126,7 +115,6 @@ class GraphStorageTest(unittest.TestCase):
             }
         })
         other_node = Node({
-            'is_edge': True,
             'props': {
                 'useless': True
             }
@@ -143,7 +131,6 @@ class GraphStorageTest(unittest.TestCase):
 
     def test_node_updating_with_different_length(self):
         node = Node({
-            'is_edge': False,
             'props': {
                 'a': 1,
                 'b': 2,
@@ -151,7 +138,6 @@ class GraphStorageTest(unittest.TestCase):
             }
         })
         other_node = Node({
-            'is_edge': True,
             'props': {
                 'useless': True
             }
@@ -168,7 +154,6 @@ class GraphStorageTest(unittest.TestCase):
 
     def test_node_deletion(self):
         node = Node({
-            'is_edge': False,
             'props': {}
         })
         nid = self.storage.create_node(node)

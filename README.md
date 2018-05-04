@@ -42,8 +42,8 @@ n = {
 Edges are dictionaries:
 ```
 e = {
-    'from_node_id': 120,  # This edge is from node 120
-    'to_node_id': 122,  # This edge is to node 122
+    'fnid': 120,  # This edge is from node 120
+    'tnid': 122,  # This edge is to node 122
     'props': {
         'color': 'red'
     }
@@ -54,12 +54,12 @@ e = {
 ##### Files
 Byte order everywhere is **big-endian** aka **network order**.
 
-There are 3 files: NODES file, NODE\_IDS file, EDGE\_IDS file.
+There are 3 files: PROPERTIES file, NODE\_IDS file, EDGES file.
 
-###### NODES file
+###### PROPERTIES file
 The most important file where nodes and properties are stored.
 
-NODES contains a `UINT` number `cur_node_addr` which is the address of the free space to write to.
+PROPERTIES file contains a `UINT` number `cur_node_addr` which is the address of the free space to write to.
 Then there is a sequence of `node` blocks. `node` blocks have this structure:
 
 Size/Type | Short name   | Description
@@ -89,23 +89,23 @@ Any non-negative | `TEXT` of length `val_desc`
 -5               | `CHAR`
 
 ###### NODE\_IDS file
-Maps node IDs to their address in NODES file
+Maps node IDs to addresses in PROPERTIES file
 
 NODE\_IDS contains an `INT` value `cur_node_id` the first free id. After `cur_node_id` there
 is a sequence of blocks. Block represents one node and has this structure: 
 
 Size/Type | Short Name  | Description
 ----------|-------------|------------
-`UINT`    | `naddr`     | Pointer to property block in Nodes file
+`UINT`    | `addr`      | Pointer to the property block in PROPERTIES file
 `UINT`    | `edge_from` | First edge from node 
 `UINT`    | `edge_to`   | First edge to node
 
-###### EDGE\_IDS file
+###### EDGES file
 
-Edges are directed connections between two nodes. Properties of an edge are stored
+Edges are directed connections between two nodes. Properties of edges are stored
 in EDGES file.
 
-EDGES\_IDS contains an `INT` value `cur_eid` the first free id. After `cur_eid` there
+EDGES file contains an `INT` value `cur_eid` the first free id. After `cur_eid` there
 is a sequence of `edge` blocks. `edge` blocks have this structure:
 
 Size/Type | Short Name  | Description
@@ -116,7 +116,7 @@ Size/Type | Short Name  | Description
 `UINT`    | `next_1`    | Next relationship ID for the start node
 `UINT`    | `prev_2`    | Previous relationship ID for the end node
 `UINT`    | `next_2`    | Next relationship ID for the end node
-`UINT`    | `props_addr`| Pointer to property block in EDGES file
+`UINT`    | `props_addr`| Pointer to property block in PROPERTIES file
 
 
 
