@@ -36,7 +36,7 @@ class GraphStorage:
     TYPE_UINT = -3
     TYPE_FLOAT = -4
 
-    FILE_SIZE = 1024 * 1024  # initial file size
+    FILE_SIZE = 1024 * 1024 * 100 # initial file size
 
     NONE = 0
     EDGE_ID_NONE = EdgeId(NONE)
