@@ -5,7 +5,7 @@ from graphstorage import GraphStorage
 NODES = 100
 
 def put():
-    global adj, graph
+    global adj, graph, mat_to_graph
     empty_props = {'props': {}}
     mat_to_graph = np.zeros(NODES, dtype=int)
     for i in range(NODES):
@@ -17,8 +17,27 @@ def put():
             graph.create_edge(mat_to_graph[i], mat_to_graph[j], edge_prop)
 
 
+def get():
+    global graph, mat_to_graph
+    for i in range(NODES):
+        u = mat_to_graph[i]
+        n = graph.get_node(u)
+        edges = graph.edges_from(u)
+
+
+def remove():
+    global graph, mat_to_graph
+    for i in range(NODES):
+        u = mat_to_graph[i]
+        edges = graph.edges_from(u)
+        for e in edges:
+            graph.remove_edge(e)
+        graph.delete_node(u)
+
+
 graph = None
 adj = None
+mat_to_graph = None
 
 
 def setup():
@@ -33,4 +52,9 @@ def setup():
 
 if __name__ == '__main__':
     setup()
-    stats = cProfile.run('put()', sort='cumtime')
+    print('Profiling put()...')
+    cProfile.run('put()', sort='cumtime')
+    print('Profiling get()...')
+    cProfile.run('get()', sort='cumtime')
+    print('Profiling remove()...')
+    cProfile.run('remove()', sort='cumtime')
