@@ -244,21 +244,24 @@ class GraphStorage:
 
     def _write_edge_to_edges(self, fr: NodeId, to: NodeId,
                              edg: NodeId, cur: EdgeId) -> None:
-        if self._read_first_edge_from_node(fr) == self.EDGE_ID_NONE:
-            self._set_first_edge_from(fr, cur)
-            prev1 = self.EDGE_ID_NONE
+        first_from = self._read_first_edge_from_node(fr)
+        if first_from == self.EDGE_ID_NONE:
+            next1 = self.EDGE_ID_NONE
         else:
-            prev1 = self._last_edge_from(fr)
-            self._set_next_edge_from(prev1, cur)
-        if self._read_first_edge_to_node(to) == 0:
-            self._set_first_edge_to(to, cur)
-            prev2 = self.EDGE_ID_NONE
+            self._set_prev_edge_from(cur, first_from)
+            next1 = first_from
+        self._set_first_edge_from(fr, cur)
+
+        first_to = self._read_first_edge_to_node(to)
+        if first_to == self.EDGE_ID_NONE:
+            next2 = self.EDGE_ID_NONE
         else:
-            prev2 = self._last_edge_to(fr)
-            self._set_next_edge_to(prev1, cur)
-        nxt1 = self.EDGE_ID_NONE
-        nxt2 = self.EDGE_ID_NONE
-        packed = self._pack_edge_id(fr, to, prev1, nxt1, prev2, nxt2, edg)
+            self._set_prev_edge_to(cur, first_to)
+            next2 = first_to
+        self._set_first_edge_to(fr, cur)
+        prev1 = self.EDGE_ID_NONE
+        prev2 = self.EDGE_ID_NONE
+        packed = self._pack_edge_id(fr, to, prev1, next1, prev2, next2, edg)
         m = self._edges_mmap
         cur = self._edge_address(cur)
         t = EdgeAddress(cur + len(packed))
