@@ -1,7 +1,7 @@
 import numpy as np
 import cProfile
 
-from src.graphstorage import GraphStorage
+from graph_storage.storage import GraphStorage
 
 NODES = 10000
 

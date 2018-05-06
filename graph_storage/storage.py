@@ -3,6 +3,8 @@ import struct
 from itertools import repeat
 from typing import Any, Dict, NewType, Tuple, Optional
 
+import os
+
 Node = NewType('Node', Dict)
 NodeId = NewType('NodeId', int)
 Edge = NewType('Edge', Dict)
@@ -48,7 +50,7 @@ class GraphStorage:
         with open(filename, 'wb') as f:
             f.write(size * b'\0')
 
-    def __init__(self, new: bool, db_name: str = 'db') -> None:
+    def __init__(self, new: bool = False, db_name: str = 'db') -> None:
         """
         Open and load database files
 
@@ -70,7 +72,8 @@ class GraphStorage:
         self._node_ids_filename = db_name + '.node_ids'
         self._edges_filename = db_name + '.edges'
 
-        if new:
+        check_files = False if os.path.isfile(self._properties_filename) else True
+        if new or check_files:
             self._make_file(self._properties_filename)
             self._make_file(self._node_ids_filename)
             self._make_file(self._edges_filename)
