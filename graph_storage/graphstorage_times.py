@@ -3,7 +3,7 @@ import cProfile
 
 from graph_storage.storage import GraphStorage
 
-NODES = 10000
+NODES = 1000
 
 
 def put():
@@ -38,6 +38,17 @@ def remove():
         graph.delete_node(u)
 
 
+def get_ids():
+    global graph
+    node_ids = 0
+    for _ in graph.get_node_ids():
+        node_ids += 1
+    print(node_ids, 'node_ids')
+    edge_ids = 0
+    for _ in graph.get_edge_ids():
+        edge_ids += 1
+    print(edge_ids, 'edge_ids')
+
 graph = None
 adj = None
 mat_to_graph = None
@@ -57,6 +68,8 @@ if __name__ == '__main__':
     setup()
     print('Profiling put()...')
     cProfile.run('put()', sort='cumtime')
+    print('Profiling get_ids()...')
+    cProfile.run('get_ids()', sort='cumtime')
     print('Profiling get()...')
     cProfile.run('get()', sort='cumtime')
     print('Profiling remove()...')

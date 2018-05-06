@@ -1,7 +1,7 @@
 import mmap
 import struct
 from itertools import repeat
-from typing import Any, Dict, NewType, Tuple, Optional
+from typing import Any, Dict, NewType, Tuple, Optional, Iterable
 
 import os
 
@@ -461,6 +461,22 @@ class GraphStorage:
             return None
         ans, _, _ = self._read_edge(edge_addr)
         return ans
+
+    def get_node_ids(self) -> Iterable[NodeId]:
+        nid = NodeId(1)
+        cur_nid = self._read_cur_node_id()
+        while nid < cur_nid:
+            if self._read_uint_from_node_ids(self._node_id_address(nid)) != self.PROPERTY_ADDRESS_NONE:
+                yield nid
+            nid += 1
+
+    def get_edge_ids(self) -> Iterable[EdgeId]:
+        cur_eid = self._read_cur_edge_id()
+        eid = EdgeId(1)
+        while eid < cur_eid:
+            if self._read_uint_from_edges(self._edge_address(eid)) != self.EDGE_ID_NONE:
+                yield eid
+            eid += 1
 
     def _write_packed_node_to_properties(self, packed: bytes,
                                          cur: PropertyAddress) -> PropertyAddress:
