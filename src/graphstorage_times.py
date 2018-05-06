@@ -3,7 +3,7 @@ import cProfile
 
 from src.graphstorage import GraphStorage
 
-NODES = 1000
+NODES = 10000
 
 
 def put():
@@ -15,16 +15,17 @@ def put():
 
     for i in range(NODES):
         for j in range(NODES):
-            edge_prop = graph.create_node(empty_props)
-            graph.create_edge(mat_to_graph[i], mat_to_graph[j], edge_prop)
+            if adj[i][j] == 1:
+                edge_prop = graph.create_node(empty_props)
+                graph.create_edge(mat_to_graph[i], mat_to_graph[j], edge_prop)
 
 
 def get():
     global graph, mat_to_graph
     for i in range(NODES):
         u = mat_to_graph[i]
-        n = graph.get_node(u)
-        edges = graph.edges_from(u)
+        graph.get_node(u)
+        graph.edges_from(u)
 
 
 def remove():
