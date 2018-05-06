@@ -1,7 +1,7 @@
 import mmap
 import struct
 from itertools import repeat
-from typing import Any, Dict, NewType, Tuple, Optional, Iterable
+from typing import Any, Dict, NewType, Tuple, Optional, Iterable, BinaryIO
 
 Node = NewType('Node', Dict)
 NodeId = NewType('NodeId', int)
@@ -36,7 +36,7 @@ class GraphStorage:
     TYPE_UINT = -3
     TYPE_FLOAT = -4
 
-    FILE_SIZE = 1024 * 1024 * 100  # initial file size
+    FILE_SIZE = 1024 * 1024  # initial file size
 
     NONE = 0
     EDGE_ID_NONE = EdgeId(NONE)
@@ -215,30 +215,61 @@ class GraphStorage:
     def _write_cur_edge_id(self, x: EdgeId) -> None:
         self._write_uint_to_edges(Uint(x), EdgeAddress(0))
 
+    @staticmethod
+    def _ensure_length(t: int, file: BinaryIO, file_mmap: mmap) -> mmap:
+        if len(file_mmap) > t:
+            return file_mmap
+        size = len(file_mmap)
+        add_size = (t - size) * 2 + int(size / 2)
+
+        file_mmap.flush()
+        file_mmap.close()
+
+        file.seek(size)
+        file.write(b'\0' * add_size)
+        file.flush()
+
+        ans = mmap.mmap(file.fileno(), 0)
+        assert(len(ans) > t)
+
+        return ans
+
+    def _ensure_properties_mmap_length(self, t: PropertyAddress) -> mmap:
+        self._properties_mmap = self._ensure_length(t, self._properties_file, self._properties_mmap)
+        return self._properties_mmap
+
+    def _ensure_node_ids_mmap_length(self, t: NodeIdAddress) -> mmap:
+        self._node_ids_mmap = self._ensure_length(t, self._node_ids_file, self._node_ids_mmap)
+        return self._node_ids_mmap
+
+    def _ensure_edges_mmap_length(self, t: EdgeAddress) -> mmap:
+        self._edges_mmap = self._ensure_length(t, self._edges_file, self._edges_mmap)
+        return self._edges_mmap
+
     def _write_uint_to_properties(self, x: Uint, cur: PropertyAddress) -> PropertyAddress:
-        m = self._properties_mmap
         t = PropertyAddress(cur + self.SIZE_UINT)
+        m = self._ensure_properties_mmap_length(t)
         m[cur:t] = self._pack_uint(x)
         return t
 
     def _write_uint_to_node_ids(self, x: Uint,
                                 cur: NodeIdAddress) -> NodeIdAddress:
-        m = self._node_ids_mmap
         t = NodeIdAddress(cur + self.SIZE_UINT)
+        m = self._ensure_node_ids_mmap_length(t)
         m[cur:t] = self._pack_uint(x)
         return t
 
     def _write_uint_to_edges(self, x: Uint,
                              cur: EdgeAddress) -> EdgeAddress:
-        m = self._edges_mmap
         t = EdgeAddress(cur + self.SIZE_UINT)
+        m = self._ensure_edges_mmap_length(t)
         m[cur:t] = self._pack_uint(x)
         return t
 
     def _write_node_to_properties(self, x: Node, cur: PropertyAddress) -> PropertyAddress:
         packed = self._pack_node(x)
-        m = self._properties_mmap
         t = PropertyAddress(cur + len(packed))
+        m = self._ensure_properties_mmap_length(t)
         m[cur:t] = packed
         return t
 
@@ -262,9 +293,9 @@ class GraphStorage:
         prev1 = self.EDGE_ID_NONE
         prev2 = self.EDGE_ID_NONE
         packed = self._pack_edge_id(fr, to, prev1, next1, prev2, next2, edg)
-        m = self._edges_mmap
         cur = self._edge_address(cur)
         t = EdgeAddress(cur + len(packed))
+        m = self._ensure_edges_mmap_length(t)
         m[cur:t] = packed
 
     def _set_next_edge_from(self, prev: EdgeId, nxt: EdgeId) -> None:
@@ -340,39 +371,39 @@ class GraphStorage:
         return cur_id
 
     def _read_uint_from_node_ids(self, f: NodeIdAddress) -> Tuple[Uint, NodeIdAddress]:
-        m = self._node_ids_mmap
         t = NodeIdAddress(f + self.SIZE_UINT)
+        m = self._ensure_node_ids_mmap_length(t)
         return self._unpack_uint(m[f:t]), t
 
     def _read_uint_from_edges(self, f: EdgeAddress) -> Tuple[Uint, EdgeAddress]:
-        m = self._edges_mmap
         t = EdgeAddress(f + self.SIZE_UINT)
+        m = self._ensure_edges_mmap_length(t)
         return self._unpack_uint(m[f:t]), t
 
     def _read_float_from_properties(self, cur: PropertyAddress) -> Tuple[Float, PropertyAddress]:
-        m = self._properties_mmap
         t = PropertyAddress(cur + self.SIZE_FLOAT)
+        m = self._ensure_properties_mmap_length(t)
         return self._unpack_float(m[cur:t]), t
 
     def _read_uint_from_properties(self, f: PropertyAddress) -> Tuple[Uint, PropertyAddress]:
-        m = self._properties_mmap
         t = PropertyAddress(f + self.SIZE_UINT)
+        m = self._ensure_properties_mmap_length(t)
         return self._unpack_uint(m[f:t]), t
 
     def _read_int_from_properties(self, cur: PropertyAddress) -> Tuple[Int, PropertyAddress]:
-        m = self._properties_mmap
         t = PropertyAddress(cur + self.SIZE_INT)
+        m = self._ensure_properties_mmap_length(t)
         return self._unpack_int(m[cur:t]), t
 
     def _read_bool_from_properties(self, f: PropertyAddress) -> Tuple[Bool, PropertyAddress]:
-        m = self._properties_mmap
         t = PropertyAddress(f + self.SIZE_BOOL)
+        m = self._ensure_properties_mmap_length(t)
         return self._unpack_bool(m[f:t]), t
 
     def _read_text_from_properties(self, f: PropertyAddress) -> Tuple[Text, PropertyAddress]:
         length, bytes_f = self._read_uint_from_properties(f)
         bytes_t = PropertyAddress(bytes_f + length)
-        m = self._properties_mmap
+        m = self._ensure_properties_mmap_length(bytes_t)
         bts = m[bytes_f:bytes_t]
         return self._unpack_text_bytes(bts), bytes_t
 
@@ -392,10 +423,10 @@ class GraphStorage:
         return EdgeId(ans)
 
     def _read_value_from_properties(self, cur: PropertyAddress) -> Tuple[Any, PropertyAddress]:
-        m = self._properties_mmap
         val_desc, cur = self._read_int_from_properties(cur)
         if val_desc >= 0:
             t = PropertyAddress(cur + val_desc)
+            m = self._ensure_properties_mmap_length(t)
             text_bytes = m[cur:t]
             return self._unpack_text_bytes(text_bytes), t
         if val_desc == self.TYPE_BOOL:
@@ -483,8 +514,8 @@ class GraphStorage:
 
     def _write_packed_node_to_properties(self, packed: bytes,
                                          cur: PropertyAddress) -> PropertyAddress:
-        m = self._properties_mmap
         t = PropertyAddress(cur + len(packed))
+        m = self._ensure_properties_mmap_length(t)
         m[cur:t] = packed
         return t
 
