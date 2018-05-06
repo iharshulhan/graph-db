@@ -26,6 +26,7 @@ class GraphStorageTest(unittest.TestCase):
         nid = self.storage.create_node(node)
         node2 = self.storage.get_node(nid)
         self.assertEqual(node['props'], node2['props'])
+        self.assertTrue(nid in self.storage.get_node_ids())
 
     def test_edge_creation_and_getting(self):
         node = Node({
@@ -61,6 +62,7 @@ class GraphStorageTest(unittest.TestCase):
         self.assertEqual(nid, edge['fnid'])
         self.assertEqual(other_nid, edge['tnid'])
         self.assertEqual(edge_props['props'], edge['props'])
+        self.assertTrue(edge_id in self.storage.get_edge_ids())
 
     def test_deleting_edge(self):
         node = Node({
@@ -98,9 +100,11 @@ class GraphStorageTest(unittest.TestCase):
         edge_2 = self.storage.create_edge(nid, other_nid, edge_nid)
         edge_nid = self.storage.create_node(edge_props_3)
         edge_3 = self.storage.create_edge(nid, other_nid, edge_nid)
+        self.assertTrue(edge_2 in self.storage.get_edge_ids())
         self.assertEqual(len(self.storage.edges_from(nid)), 3)
         self.storage.remove_edge(edge_2)
         self.assertEqual(len(self.storage.edges_from(nid)), 2)
+        self.assertTrue(edge_2 not in self.storage.get_edge_ids())
 
     def test_node_none_on_non_existent_nid(self):
         self.assertIsNone(self.storage.get_node(NodeId(123)),
