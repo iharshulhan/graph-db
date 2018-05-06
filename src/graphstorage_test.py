@@ -1,6 +1,6 @@
 import unittest
 
-from graphstorage import GraphStorage, Node, NodeId
+from src.graphstorage import GraphStorage, Node, NodeId
 
 
 class GraphStorageTest(unittest.TestCase):

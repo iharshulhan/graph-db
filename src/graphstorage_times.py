@@ -1,8 +1,10 @@
 import numpy as np
 import cProfile
-from graphstorage import GraphStorage
 
-NODES = 100
+from src.graphstorage import GraphStorage
+
+NODES = 1000
+
 
 def put():
     global adj, graph, mat_to_graph
