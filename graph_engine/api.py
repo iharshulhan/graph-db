@@ -67,7 +67,6 @@ def add_edge():
     from_node_id = flask.request.form.get('from_node', type=int, default=None)
     to_node_id = flask.request.form.get('to_node', type=int, default=None)
 
-    print(props, from_node_id, to_node_id)
     if not (props and from_node_id and to_node_id):
         return flask.make_response('Not enough data was provided', BAD_REQUEST_CODE)
     edge_id = graph.create_edge(from_node_id, to_node_id, props)
@@ -124,6 +123,32 @@ def get_edge_to():
         return flask.make_response('Node id was not provided', BAD_REQUEST_CODE)
     edges = graph.get_edges_to(node_id)
     return flask.make_response(flask.jsonify({'edges': edges}), SUCCESS_CODE)
+
+
+@app.route('/findNodes', methods=['GET'])
+def find_nodes():
+    """
+    Get all nodes matching props
+    :return: a list of nodes
+    """
+
+    props = json.loads(flask.request.args.get('props'))
+
+    nodes = graph.get_nodes_by_properties(props)
+    return flask.make_response(flask.jsonify({'nodes': nodes}), SUCCESS_CODE)
+
+
+@app.route('/findEdges', methods=['GET'])
+def find_edges():
+    """
+    Get all edges matching props
+    :return: a list of edges
+    """
+
+    props = json.loads(flask.request.args.get('props'))
+
+    nodes = graph.get_edges_by_properties(props)
+    return flask.make_response(flask.jsonify({'edges': nodes}), SUCCESS_CODE)
 
 
 if __name__ == '__main__':

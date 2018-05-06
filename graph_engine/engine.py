@@ -30,8 +30,67 @@ def execute_function_in_parallel(func: Callable, list_args: List, processes: boo
         results_tmp = [pool.apply_async(func, args=(*args,))
                        for args in list_args[i * NUM_OF_THREADS: (i + 1) * NUM_OF_THREADS]]
         for result in results_tmp:
-            results.append(result.get())
+            res = result.get()
+            if res:
+                results.append(res)
     return results
+
+
+def check_properties(props: Dict, desirable_props: Dict) -> bool:
+    """
+    Check if properties satisfy desirable ones
+    :param props: props to check
+    :param desirable_props: props that are desired
+    :return: True or Fasle
+    """
+    if not props:
+        return False
+    for key, value in desirable_props.items():
+        if key == 'negative_props':
+            if not isinstance(value, List):
+                raise Exception('Negative props type should be a list')
+            for neg_prop in value:
+                if neg_prop in props:
+                    return False
+            continue
+        if key == 'less_props':
+            if not isinstance(value, Dict):
+                raise Exception('Less props type should be a dict')
+            for ls_key, ls_value in value.items():
+                if ls_key not in props or props[ls_key] >= ls_value:
+                    return False
+            continue
+        if key == 'less_or_equal_props':
+            if not isinstance(value, Dict):
+                raise Exception('Less or equal props type should be a dict')
+            for ls_eq_key, ls_eq_value in value.items():
+                if ls_eq_key not in props or props[ls_eq_key] > ls_eq_value:
+                    return False
+            continue
+        if key == 'greater_props':
+            if not isinstance(value, Dict):
+                raise Exception('Greater props type should be a dict')
+            for gr_key, gr_value in value.items():
+                if gr_key not in props or props[gr_key] <= gr_value:
+                    return False
+            continue
+
+        if key == 'greater_or_equal_props':
+            if value is not Dict:
+                raise Exception('Greater or equal props type should be a dict')
+            for gr_eq_key, gr_eq_value in value.items():
+                if gr_eq_key not in props or props[gr_eq_key] <= gr_eq_value:
+                    return False
+            continue
+        if key == 'equal_props':
+            if not isinstance(value, Dict):
+                raise Exception('Equal props type should be a dict')
+            for eq_key, eq_value in value.items():
+                if eq_key not in props or props[eq_key] != eq_value:
+                    return False
+            continue
+
+    return True
 
 
 class GraphEngine:
@@ -59,6 +118,7 @@ class GraphEngine:
 
         node.pop('record_address')
         node.pop('record_length')
+        node['node_id'] = node_id
 
         return node
 
@@ -76,7 +136,23 @@ class GraphEngine:
         :param properties: a dict containing desirable properties of a node
         :return: a list of nodes
         """
-        # TODO
+
+        def check_property_in_node(node_id: int) -> Optional[Node]:
+            """
+            Check if a node contains all props specified in the query
+            :param node_id: a if of a node
+            :return: Node or None
+            """
+            node = self.get_node(node_id)
+            if not node:
+                return None
+            if check_properties(node['props'], properties):
+                return node
+            else:
+                return None
+
+        all_nodes = self.storage.get_node_ids()
+        return execute_function_in_parallel(check_property_in_node, [(node_id,) for node_id in all_nodes])
 
     def create_edge(self, from_node: NodeId, to_node: NodeId, properties: Dict) -> Optional[EdgeId]:
         """
@@ -90,7 +166,6 @@ class GraphEngine:
         node1 = self.get_node(from_node)
         node2 = self.get_node(to_node)
 
-        print(node1, node2)
         if node1 and node2:
             return self.storage.create_edge(from_node, to_node, self.storage.create_node({'props': properties}))
         else:
@@ -146,18 +221,27 @@ class GraphEngine:
         if not node:
             return []
         edges_ids = self.storage.edges_to(node_id)
-        print(edges_ids)
         return execute_function_in_parallel(self.get_edge, [(edges_id, False, True) for edges_id in edges_ids])
 
+    def get_edges_by_properties(self, properties: Dict) -> List[Node]:
+        """
+        Find all edges which have specified properties
+        :param properties: a dict containing desirable properties of an edge
+        :return: a list of edges
+        """
 
-# def test():
-#     graph = GraphEngine('test')
-#     node1 = graph.create_node({'loh1': 'yes'})
-#     node2 = graph.create_node({'loh2': 'no'})
-#     print(node1, node2)
-#     edge = graph.create_edge(node1, node2, {'loh3': 'no'})
-#
-#     print(graph.get_edges_from(node1))
-#
-#
-# test()
+        def check_property_in_edge(edge_id: int) -> Optional[Edge]:
+            """
+            Check if an edge contains all props specified in the query
+            :param edge_id: a if of an edge
+            :return: Node or None
+            """
+            edge = self.get_edge(edge_id)
+            if check_properties(edge['props'], properties):
+                return edge
+            else:
+                return None
+
+        all_edges = self.storage.get_edge_ids()
+        return execute_function_in_parallel(check_property_in_edge, [(edge_id,) for edge_id in all_edges])
+
