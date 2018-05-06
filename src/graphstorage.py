@@ -258,7 +258,7 @@ class GraphStorage:
         else:
             self._set_prev_edge_to(cur, first_to)
             next2 = first_to
-        self._set_first_edge_to(fr, cur)
+        self._set_first_edge_to(to, cur)
         prev1 = self.EDGE_ID_NONE
         prev2 = self.EDGE_ID_NONE
         packed = self._pack_edge_id(fr, to, prev1, next1, prev2, next2, edg)
@@ -426,7 +426,12 @@ class GraphStorage:
         ans: Edge = Edge({})
         ans['fnid'], et = self._read_uint_from_edges(eaddr)
         ans['tnid'], et = self._read_uint_from_edges(et)
-        props_addr, et = self._read_uint_from_edges(EdgeAddress(eaddr + 6 * self.SIZE_UINT))
+        ans['prev_1'], et = self._read_uint_from_edges(et)
+        ans['next_1'], et = self._read_uint_from_edges(et)
+        ans['prev_2'], et = self._read_uint_from_edges(et)
+        ans['next_2'], et = self._read_uint_from_edges(et)
+        props_addr, et = self._read_uint_from_edges(et)
+        # props_addr, et = self._read_uint_from_edges(EdgeAddress(eaddr + 6 * self.SIZE_UINT))
         node, pt = self._read_node_from_properties(PropertyAddress(props_addr))
         ans['props'] = node['props']
         return ans, et, pt
@@ -454,7 +459,7 @@ class GraphStorage:
         Edge by the given ID or None if such edge doesn't exist
         """
         edge_addr = self._edge_address(eid)
-        if self._read_uint_from_edges(edge_addr) == self.EDGE_ID_NONE:
+        if self._read_uint_from_edges(edge_addr) == self.NODE_ID_NONE:
             return None
         ans, _, _ = self._read_edge(edge_addr)
         return ans
@@ -471,7 +476,8 @@ class GraphStorage:
         cur_eid = self._read_cur_edge_id()
         eid = EdgeId(1)
         while eid < cur_eid:
-            if self._read_uint_from_edges(self._edge_address(eid)) != self.EDGE_ID_NONE:
+            edge, _, _ = self._read_edge(self._edge_address(eid))
+            if edge['fnid'] != self.EDGE_ID_NONE:
                 yield eid
             eid += 1
 
@@ -536,28 +542,19 @@ class GraphStorage:
             prev = self._prev_edge_to(eid)
             self._set_prev_edge_to(prev, nxt)
             self._set_next_edge_to(prev, nxt)
+        self._write_uint_to_edges(Uint(self.NODE_ID_NONE), eaddr)
 
-    def edges_from(self, nid: NodeId):
-        edges = []
-        f = self._read_first_edge_from_node(nid)
-        if f != 0:
-            edges.append(f)
-            s = self._next_edge_from(f)
-            while s != 0:
-                edges.append(s)
-                s = self._next_edge_from(s)
-        return edges
+    def edges_from(self, nid: NodeId) -> Iterable[EdgeId]:
+        eid = self._read_first_edge_from_node(nid)
+        while eid != self.EDGE_ID_NONE:
+            yield eid
+            eid = self._next_edge_from(eid)
 
-    def edges_to(self, nid: NodeId):
-        edges = []
-        f = self._read_first_edge_to_node(nid)
-        if f != 0:
-            edges.append(f)
-            s = self._next_edge_to(f)
-            while s != 0:
-                edges.append(s)
-                s = self._next_edge_to(s)
-        return edges
+    def edges_to(self, nid: NodeId) -> Iterable[EdgeId]:
+        eid = self._read_first_edge_to_node(nid)
+        while eid != self.EDGE_ID_NONE:
+            yield eid
+            eid = self._next_edge_to(eid)
 
     def close(self):
         self._properties_mmap.close()
