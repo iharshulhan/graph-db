@@ -319,7 +319,7 @@ class GraphEngine:
             visited_nodes[query_id] = {}
 
         visited_nodes[query_id][node_id] = True
-        neighbours = []
+        neighbours = [node_id]
         remote_nodes = []
         queue = deque([(node_id, hops)])
 
