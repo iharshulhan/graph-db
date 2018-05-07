@@ -288,8 +288,8 @@ class DBMS:
                     for node in nodes:
                         if not node:
                             continue
-                        if 'remote_node' in node:
-                            nodes_modified.append(self.get_node(node['remote_node_id']))
+                        if 'remote_node' in node['props']:
+                            nodes_modified.append(self.get_node(node['props']['remote_node_id']))
                         else:
                             node['node_id'] = f'{worker}${node["node_id"]}'
                             nodes_modified.append(node)
