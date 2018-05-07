@@ -20,7 +20,7 @@ def load_social_circles_facebook(dbms: DBMS) -> None:
     edges = {}
     circles = {}
     for number, circles_filename in enumerate(glob.glob(prefix + '*' + circles_suffix)):
-        if number == 1:
+        if number == 2:
             break
         ego_id = re.search(r'(\d+)\.circles$', circles_filename).group(1)
 
@@ -82,34 +82,46 @@ def load_social_circles_facebook(dbms: DBMS) -> None:
 
     # Put data to graph
     node_id_mapping = {}
+    print(len(circles), 'nodes')
     # make circle nodes
     for circle_name in circles:
         props = {'label': 'circle', 'name': circle_name}
         node_id_mapping[circle_name] = dbms.add_node(props)
     # make user nodes
+    print(len(node_props), 'nodes')
     for fb_id in node_props:
         props = node_props[fb_id]
         props['label'] = 'user'
         props['fb_id'] = fb_id
         node_id_mapping[fb_id] = dbms.add_node(props)
     # make circle edges
+    tot_edges = 0
     for circle_name in circles:
         ids = circles[circle_name]
         cnid = node_id_mapping[circle_name]
         for nid in ids:
+            tot_edges += 1
             unid = node_id_mapping[nid]
             dbms.add_edge(unid, cnid, {'rebro': 'da'})
+    print(tot_edges, 'already done edges')
     # make regular edges
     for u in edges:
         unid = node_id_mapping[u]
+        params = []
         for v in edges[u]:
+            tot_edges += 1
+            if tot_edges % 1000 == 0:
+                print(tot_edges, 'edges already added')
             vnid = node_id_mapping[v]
             dbms.add_edge(unid, vnid, {'rebro': 'da'})
 
 
 from distribute_graph_dbms.start_engines import start_engines
 from time import sleep
+import logging
 if __name__ == '__main__':
+    log = logging.getLogger('werkzeug')
+    log.disabled = True
     engines = start_engines()
     sleep(2)
     dbms = DBMS(engines)
