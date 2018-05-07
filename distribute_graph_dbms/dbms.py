@@ -288,8 +288,11 @@ class DBMS:
                     for node in nodes:
                         if not node:
                             continue
-                        node['node_id'] = f'{worker}${node["node_id"]}'
-                        nodes_modified.append(node)
+                        if 'remote_node' in node:
+                            nodes_modified.append(self.get_node(node['remote_node_id']))
+                        else:
+                            node['node_id'] = f'{worker}${node["node_id"]}'
+                            nodes_modified.append(node)
                 return nodes_modified
             except Exception as e:
                 print(f'Could not find nodes in worker {worker}. Response: {e}')
