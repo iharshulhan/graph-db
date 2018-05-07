@@ -9,6 +9,7 @@ from distribute_graph_dbms.dbms import DBMS
 
 
 def load_social_circles_facebook(dbms: DBMS) -> None:
+    ego_ids = ['0', '107', '348', '414', '686', '698', '1684', '1912', '3437', '3980']
     prefix = 'dataset/'
     circles_suffix = '.circles'
     edges_suffix = '.edges'
@@ -19,11 +20,10 @@ def load_social_circles_facebook(dbms: DBMS) -> None:
     node_props = {}
     edges = {}
     circles = {}
-    for number, circles_filename in enumerate(glob.glob(prefix + '*' + circles_suffix)):
-        if number == 2:
-            break
-        ego_id = re.search(r'(\d+)\.circles$', circles_filename).group(1)
+    for ego_id in ego_ids[:1]:
+        print('Parsing ego id', ego_id)
 
+        circles_filename = prefix + ego_id + circles_suffix
         edges_filename = prefix + ego_id + edges_suffix
         egofeat_filename = prefix + ego_id + egofeat_suffix
         feat_filename = prefix + ego_id + feat_suffix
@@ -31,12 +31,9 @@ def load_social_circles_facebook(dbms: DBMS) -> None:
 
         with open(circles_filename, 'r') as circles_file:
             for line in circles_file:
-                words = line.split(' ')
+                words = line.split()
                 circle_name = words[0] + '_' + ego_id
-                circles[circle_name] = [ego_id]
-                circle_ids = words[1:]
-                for circle_id in circle_ids:
-                    circles[circle_name].append(circle_id)
+                circles[circle_name] = [ego_id] + words[1:]
 
         featnames = []
         with open(featnames_filename, 'r') as featnames_file:
@@ -94,6 +91,7 @@ def load_social_circles_facebook(dbms: DBMS) -> None:
         props['label'] = 'user'
         props['fb_id'] = fb_id
         node_id_mapping[fb_id] = dbms.add_node(props)
+    print('EGO NODE IS', node_id_mapping[ego_id])
     # make circle edges
     tot_edges = 0
     for circle_name in circles:
@@ -102,7 +100,8 @@ def load_social_circles_facebook(dbms: DBMS) -> None:
         for nid in ids:
             tot_edges += 1
             unid = node_id_mapping[nid]
-            dbms.add_edge(unid, cnid, {'rebro': 'da'})
+            print('CIRCLE EDGE', unid, cnid)
+            dbms.add_edge(unid, cnid, {})
     print(tot_edges, 'already done edges')
     # make regular edges
     for u in edges:
@@ -113,7 +112,8 @@ def load_social_circles_facebook(dbms: DBMS) -> None:
             if tot_edges % 1000 == 0:
                 print(tot_edges, 'edges already added')
             vnid = node_id_mapping[v]
-            dbms.add_edge(unid, vnid, {'rebro': 'da'})
+            dbms.add_edge(unid, vnid, {})
+    print('Loaded!')
 
 
 from distribute_graph_dbms.start_engines import start_engines
@@ -126,4 +126,22 @@ if __name__ == '__main__':
     sleep(2)
     dbms = DBMS(engines)
     load_social_circles_facebook(dbms)
+    exit(0)
+
+    zero_node = dbms.find_nodes({'equal_props': {'fb_id': '0'}})[0]
+    print('zero_node', zero_node)
+    three_friends = dbms.find_neighbours(zero_node['node_id'], 3, {'equal_props': {'label': 'user'}})
+    for friend in three_friends:
+        print('My three-friend', friend['props']['fb_id'])
+    other_gender = dbms.find_nodes({
+        'not_equal_props': {'gender': zero_node['props']['gender']},
+        'equal_props': {'label': 'user'}
+    })
+    print('My gender is', zero_node['props']['gender'])
+    for other in other_gender:
+        print('But', other['props']['fb_id'], 'has other gender', other['props']['gender'])
+    print('End :-)')
+
+
+
 

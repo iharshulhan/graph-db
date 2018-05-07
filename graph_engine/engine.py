@@ -67,6 +67,13 @@ def check_properties(props: Dict, desirable_props: Dict) -> bool:
                 if eq_key not in props or props[eq_key] != eq_value:
                     return False
             continue
+        if key == 'not_equal_props':
+            if not isinstance(value, Dict):
+                raise Exception('Not equal props type should be a dict')
+            for neq_key, neq_value in value.items():
+                if neq_key not in props or props[neq_key] == neq_value:
+                    return False
+            continue
 
     return True
 
