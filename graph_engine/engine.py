@@ -23,6 +23,9 @@ def check_properties(props: Dict, desirable_props: Dict) -> bool:
     if not desirable_props:
         return True
 
+    if 'remote_node' in props:
+        return True
+
     for key, value in desirable_props.items():
         if key == 'negative_props':
             if not isinstance(value, List):
