@@ -190,7 +190,7 @@ class GraphEngine:
 
         return self.storage.create_edge(from_node, to_node, self.storage.create_node({'props': properties}))
 
-    def delete_edge(self, edge_id: NodeId) -> None:
+    def delete_edge(self, edge_id: EdgeId) -> None:
         """
         Delete an edge from DB
         :param edge_id: an id of the edge
@@ -234,7 +234,7 @@ class GraphEngine:
             return execute_function_in_parallel(self.check_property_in_edge,
                                                 [(edges_id, properties, False, True) for edges_id in edges_ids])
 
-    def get_edges_to(self, node_id: NodeId, properties: Dict = None) -> Node:
+    def get_edges_to(self, node_id: NodeId, properties: Dict = None) -> List[Edge]:
         """
         Find all edges to a node
         :param node_id: an id of the node
@@ -268,7 +268,7 @@ class GraphEngine:
         else:
             return None
 
-    def get_edges_by_properties(self, properties: Dict) -> List[Node]:
+    def get_edges_by_properties(self, properties: Dict) -> List[Edge]:
         """
         Find all edges which have specified properties
         :param properties: a dict containing desirable properties of an edge
