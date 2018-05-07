@@ -129,6 +129,7 @@ class DBMS:
             data['to_node'] = to_node_id
         else:
             data['to_node_remote'] = to_node_id_str
+            data['node_props'] = self.get_node(to_worker)['props']
 
         try:
             response = requests.post(url, data=data)
