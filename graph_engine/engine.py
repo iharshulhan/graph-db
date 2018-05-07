@@ -152,9 +152,11 @@ class GraphEngine:
             return nodes
 
     def create_edge(self, from_node: NodeId, properties: Dict,
-                    to_node: NodeId = None, to_node_remote: str = None) -> Optional[EdgeId]:
+                    to_node: NodeId = None, to_node_remote: str = None,
+                    node_properties: Dict = None) -> Optional[EdgeId]:
         """
         Create a new edge in DB
+        :param node_properties: properties for a remote node
         :param to_node_remote: an id of a remote node
         :param to_node: an id of a node where the edge ends
         :param from_node: an id of a node from which the edge starts
@@ -170,7 +172,7 @@ class GraphEngine:
         if not node1:
             return None
         elif to_node_remote:
-            to_node = self.create_node({**properties, 'remote_node_id': to_node_remote, 'remote_node': True})
+            to_node = self.create_node({**node_properties, **{'remote_node_id': to_node_remote, 'remote_node': True}})
         if node2 or to_node_remote:
             return self.storage.create_edge(from_node, to_node, self.storage.create_node({'props': properties}))
 

@@ -75,10 +75,11 @@ def add_edge():
     from_node_id = flask.request.form.get('from_node', type=int, default=None)
     to_node_id = flask.request.form.get('to_node', type=int, default=None)
     to_node_remote = flask.request.form.get('to_node_remote', type=str, default=None)
+    node_props = json.loads(flask.request.form.get('node_props', type=str, default='{}'))
 
     if not (from_node_id and (to_node_id or to_node_remote)):
         return flask.make_response('Not enough data was provided', BAD_REQUEST_CODE)
-    edge_id = graph.create_edge(from_node_id, props, to_node_id, to_node_remote)
+    edge_id = graph.create_edge(from_node_id, props, to_node_id, to_node_remote, node_props)
     return flask.make_response(flask.jsonify({'edge_id': edge_id}), SUCCESS_CODE)
 
 
