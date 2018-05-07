@@ -1,9 +1,84 @@
 # graph-db
 Implementation of Graph DB engine
 
-## Overall description
-We build a graph db engine. In graph there will be _nodes_ and _edges_.
+### Usage
+In order to manage a database a user can use Graph Engine directly without REST-API. This is the fastest way. However, 
+if distributed database management is the case, the user should use distributed DBMS which is based on REST queries 
+to graph engine.
+#### Graph engine
+To create a database, create an instance of GraphEngine object with a specified name of a database.
+To manage a database following functions are available.
 
+`create_node(properties)` - Create a new node in DB. _Properties_: a dictionary containing properties of the node. 
+Returns an id of the node
+
+`create_edge(from_node_id, properties, to_node_id)` - Create a new edge in DB. Returns an ID of an edge
+
+`get_node(node_id)` - Find a node by its id
+
+`get_edge(edge_id, from_node: bool, to_node: bool)` - Find an edge by its id. If optional parameter _to_node_ is 
+True return node object of a to_node. If optional parameter _from_node_ is True return node object of a from_node. 
+Returns an edge
+
+`delete_node(node_id)` - Delete a node from DB
+
+`delete_edge(edge_id)` - Delete an edge from DB
+
+`check_property_in_node(node_id, properties, node)` - Check if a node contains all props specified in the query. 
+_Node_ parameter is optional
+
+`check_property_in_edge(edge_id, properties, from_node: bool, to_node: bool)` - Check if an edge contains all properties 
+specified in the query. If optional parameter _to_node_ is True return node object of a to_node. If optional parameter
+ _from_node_ is True return node object of a from_node. 
+
+`get_nodes_by_properties(properties)` - Find all nodes which have specified properties. Returns list of nodes
+
+`get_edges_by_properties(properties)` - Find all edges which have specified properties. Returns list of edges
+
+`get_edges_from(node_id, properties)` - Find all edges from a node. Parameter _properties_ is optional. Returns list of edges
+
+`get_edges_to(node_id, properties)` - Find all edges to a node. Parameter _properties_ is optional. Returns list of edges
+
+`find_neighbours(node_id, hops, query_id, node_properties, edge_properties)` - Find all neighbours for a node within 
+specified number of hops. _Query_id_ is an id of a request. _Hops_ is a max distance between neighbours. 
+_Node_properties_ is an optional parameter with a dictionary containing desirable properties for nodes. 
+_Edge_properties_ is an optional parameter with a dictionary containing desirable properties for edges.
+
+
+
+#### Distributed DBMS
+To create a distributed database, create an instance of DBMS object with a specified urls of graph engines. To manage 
+a database following functions are available.
+
+`add_node(props)` - Create a new node in DB. _Props_: a dictionary containing properties of the node. 
+Returns an id of the node
+
+`get_node(node_id_str)` - Find a node by its id
+
+`delete_node(node_id_str)` - Delete a node from DB
+
+`add_edge(from_node_id_str, to_node_id_str, props)` - Create a new edge in DB. Returns an ID of an edge
+
+`get_edge(edge_id_str)` - Find an edge by its id. Returns an edge if found
+
+`delete_edge(edge_id_str)` - Delete an edge from DB
+
+`get_edges_from(node_id_str, props)` - Find all edges from a node. Parameter _props_ is optional. Returns list of edges
+
+`get_edges_to(node_id_str, props)` - Find all edges to a node. Parameter _props_ is optional. Returns list of edges
+
+`find_nodes(props)` - Find all nodes which have specified properties. Parameter _props_ is optional. _Props_ is
+ a dictionary containing desirable properties of a node. Returns list of nodes
+
+`find_edges(props)` - Find all edges which have specified properties. Parameter _props_ is optional. _Props_ is
+ a dictionary containing desirable properties of a edges. Returns list of edges
+ 
+ `find_neighbours(node_id_str, hops, node_props, edge_props)` - Find all neighbours for a node within 
+specified number of hops. _Hops_ is a max distance between neighbours. 
+_Node_props_ is an optional parameter with a dictionary containing desirable properties for nodes. 
+_Edge_props_ is an optional parameter with a dictionary containing desirable properties for edges.
+
+## I/O description
 Nodes have many _properties_ (key-value pairs)
 
 Edges connect pairs of nodes, are directional, there can be loops (`x->x`).
