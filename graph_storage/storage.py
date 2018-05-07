@@ -72,8 +72,9 @@ class GraphStorage:
         self._node_ids_filename = db_name + '.node_ids'
         self._edges_filename = db_name + '.edges'
 
-        check_files = False if os.path.isfile(self._properties_filename) else True
-        if new or check_files:
+        file_exists = os.path.isfile(self._properties_filename)
+        make_files = new or not file_exists
+        if make_files:
             self._make_file(self._properties_filename)
             self._make_file(self._node_ids_filename)
             self._make_file(self._edges_filename)
@@ -86,7 +87,7 @@ class GraphStorage:
         self._node_ids_mmap = mmap.mmap(self._node_ids_file.fileno(), 0)
         self._edges_mmap = mmap.mmap(self._edges_file.fileno(), 0)
 
-        if new:
+        if make_files:
             first_id = 1
             self._write_cur_addr(PropertyAddress(first_id))
             self._write_cur_node_id(NodeId(first_id))
