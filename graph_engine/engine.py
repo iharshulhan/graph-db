@@ -23,9 +23,6 @@ def check_properties(props: Dict, desirable_props: Dict) -> bool:
     if not desirable_props:
         return True
 
-    if 'remote_node' in props:
-        return True
-
     for key, value in desirable_props.items():
         if key == 'negative_props':
             if not isinstance(value, List):
@@ -173,7 +170,7 @@ class GraphEngine:
         if not node1:
             return None
         elif to_node_remote:
-            to_node = self.create_node({'remote_node_id': to_node_remote, 'remote_node': True})
+            to_node = self.create_node({**properties, 'remote_node_id': to_node_remote, 'remote_node': True})
         if node2 or to_node_remote:
             return self.storage.create_edge(from_node, to_node, self.storage.create_node({'props': properties}))
 
