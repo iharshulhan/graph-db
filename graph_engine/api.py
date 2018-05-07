@@ -22,7 +22,7 @@ def add_node():
     :return: a node id
     """
 
-    props = json.loads(flask.request.form.get('props'))
+    props = json.loads(flask.request.form.get('props',  type=str, default='{}'))
 
     if not props:
         return flask.make_response('No data provided', BAD_REQUEST_CODE)
@@ -63,7 +63,7 @@ def add_edge():
     :return: an edge id
     """
 
-    props = json.loads(flask.request.form.get('props'))
+    props = json.loads(flask.request.form.get('props',  type=str, default='{}'))
     from_node_id = flask.request.form.get('from_node', type=int, default=None)
     to_node_id = flask.request.form.get('to_node', type=int, default=None)
 
@@ -132,7 +132,7 @@ def find_nodes():
     :return: a list of nodes
     """
 
-    props = json.loads(flask.request.args.get('props'))
+    props = json.loads(flask.request.args.get('props',  type=str, default='{}'))
 
     nodes = graph.get_nodes_by_properties(props)
     return flask.make_response(flask.jsonify({'nodes': nodes}), SUCCESS_CODE)
@@ -145,10 +145,31 @@ def find_edges():
     :return: a list of edges
     """
 
-    props = json.loads(flask.request.args.get('props'))
+    props = json.loads(flask.request.args.get('props',  type=str, default='{}'))
 
     nodes = graph.get_edges_by_properties(props)
     return flask.make_response(flask.jsonify({'edges': nodes}), SUCCESS_CODE)
+
+
+@app.route('/findNeighbours', methods=['GET'])
+def find_neighbours():
+    """
+    Get all neighbours of a node
+    :return: a list of neighbours
+    """
+
+    node_id = flask.request.args.get('node_id', type=int, default=None)
+    hops = flask.request.args.get('hops', type=int, default=0)
+    query_id = flask.request.args.get('query_id', type=str, default='')
+    node_props = json.loads(flask.request.args.get('node_props', type=str, default='{}'))
+    edge_props = json.loads(flask.request.args.get('edge_props', type=str, default='{}'))
+
+    if not node_id:
+        return flask.make_response('Node id was not provided', BAD_REQUEST_CODE)
+    if not query_id:
+        return flask.make_response('Query id was not provided', BAD_REQUEST_CODE)
+    neighbours, remote_nodes = graph.find_neighbours(node_id, hops, query_id, node_props, edge_props)
+    return flask.make_response(flask.jsonify({'neighbours': neighbours, 'remote_nodes': remote_nodes}), SUCCESS_CODE)
 
 
 if __name__ == '__main__':

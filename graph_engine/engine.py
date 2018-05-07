@@ -2,9 +2,12 @@
 A graph engine layer to work with graph storage
 """
 from multiprocessing.pool import ThreadPool, Pool
-from typing import Dict, List, Optional, Callable
+from typing import Dict, List, Optional, Callable, Tuple
+from collections import deque
 
 from graph_storage.storage import GraphStorage, NodeId, Node, EdgeId, Edge
+
+visited_nodes = {}  # array to store history between requests
 
 # number of threads should be bigger than actual number of tasks, elsewhere the pool will not work
 NUM_OF_THREADS = 150
@@ -93,6 +96,16 @@ def check_properties(props: Dict, desirable_props: Dict) -> bool:
     return True
 
 
+def clear_visited_nodes(query_id: int) -> None:
+    """
+    Release history for a given query id
+    :param query_id: an id of a request
+    :return: None
+    """
+    if query_id in visited_nodes:
+        visited_nodes.pop(query_id)
+
+
 class GraphEngine:
 
     def __init__(self, name: str):
@@ -130,29 +143,33 @@ class GraphEngine:
         """
         return self.storage.delete_node(node_id)
 
+    def check_property_in_node(self, node_id: int, properties: Dict, node: Node = None) -> Optional[Node]:
+        """
+        Check if a node contains all props specified in the query
+        :param node: the node
+        :param node_id: an id of the node
+        :param properties: a dict containing properties of the node
+        :return: Node or None
+        """
+        if not node:
+            node = self.get_node(node_id)
+        if not node:
+            return None
+        if check_properties(node['props'], properties):
+            return node
+        else:
+            return None
+
     def get_nodes_by_properties(self, properties: Dict) -> List[Node]:
         """
         Find all nodes which have specified properties
-        :param properties: a dict containing desirable properties of a node
+        :param properties: a dict containing desirable properties of the node
         :return: a list of nodes
         """
 
-        def check_property_in_node(node_id: int) -> Optional[Node]:
-            """
-            Check if a node contains all props specified in the query
-            :param node_id: a if of a node
-            :return: Node or None
-            """
-            node = self.get_node(node_id)
-            if not node:
-                return None
-            if check_properties(node['props'], properties):
-                return node
-            else:
-                return None
-
         all_nodes = self.storage.get_node_ids()
-        return execute_function_in_parallel(check_property_in_node, [(node_id,) for node_id in all_nodes])
+        return execute_function_in_parallel(self.check_property_in_node,
+                                            [(node_id, properties) for node_id in all_nodes])
 
     def create_edge(self, from_node: NodeId, to_node: NodeId, properties: Dict) -> Optional[EdgeId]:
         """
@@ -166,10 +183,12 @@ class GraphEngine:
         node1 = self.get_node(from_node)
         node2 = self.get_node(to_node)
 
-        if node1 and node2:
-            return self.storage.create_edge(from_node, to_node, self.storage.create_node({'props': properties}))
-        else:
+        if not node1:
             return None
+        elif not node2:
+            to_node = self.create_node({'remote_node_id': to_node, 'remote_node': True})
+
+        return self.storage.create_edge(from_node, to_node, self.storage.create_node({'props': properties}))
 
     def delete_edge(self, edge_id: NodeId) -> None:
         """
@@ -197,10 +216,11 @@ class GraphEngine:
 
         return edge
 
-    def get_edges_from(self, node_id: NodeId) -> Node:
+    def get_edges_from(self, node_id: NodeId, properties: Dict = None) -> List[Edge]:
         """
         Find all edges from a node
         :param node_id: an id of the node
+        :param properties: a dict containing desirable properties of an edge
         :return: a list of edges
         """
 
@@ -208,12 +228,17 @@ class GraphEngine:
         if not node:
             return []
         edges_ids = self.storage.edges_from(node_id)
-        return execute_function_in_parallel(self.get_edge, [(edges_id, False, True) for edges_id in edges_ids])
+        if not properties:
+            return execute_function_in_parallel(self.get_edge, [(edges_id, False, True) for edges_id in edges_ids])
+        else:
+            return execute_function_in_parallel(self.check_property_in_edge,
+                                                [(edges_id, properties, False, True) for edges_id in edges_ids])
 
-    def get_edges_to(self, node_id: NodeId) -> Node:
+    def get_edges_to(self, node_id: NodeId, properties: Dict = None) -> Node:
         """
         Find all edges to a node
         :param node_id: an id of the node
+        :param properties: a dict containing desirable properties of an edge
         :return: a list of edges
         """
 
@@ -221,7 +246,27 @@ class GraphEngine:
         if not node:
             return []
         edges_ids = self.storage.edges_to(node_id)
-        return execute_function_in_parallel(self.get_edge, [(edges_id, False, True) for edges_id in edges_ids])
+        if not properties:
+            return execute_function_in_parallel(self.get_edge, [(edges_id, False, True) for edges_id in edges_ids])
+        else:
+            return execute_function_in_parallel(self.check_property_in_edge,
+                                                [(edges_id, properties, False, True) for edges_id in edges_ids])
+
+    def check_property_in_edge(self, edge_id: int, properties: Dict,
+                               from_node: bool = False, to_node: bool = False) -> Optional[Edge]:
+        """
+        Check if an edge contains all props specified in the query
+        :param edge_id: a if of an edge
+        :param properties: a dict containing desirable properties of an edge
+        :param to_node: if True return node object of a to_node
+        :param from_node: if True return node object of a from_node
+        :return: Node or None
+        """
+        edge = self.get_edge(edge_id, from_node, to_node)
+        if check_properties(edge['props'], properties):
+            return edge
+        else:
+            return None
 
     def get_edges_by_properties(self, properties: Dict) -> List[Node]:
         """
@@ -229,19 +274,56 @@ class GraphEngine:
         :param properties: a dict containing desirable properties of an edge
         :return: a list of edges
         """
-
-        def check_property_in_edge(edge_id: int) -> Optional[Edge]:
-            """
-            Check if an edge contains all props specified in the query
-            :param edge_id: a if of an edge
-            :return: Node or None
-            """
-            edge = self.get_edge(edge_id)
-            if check_properties(edge['props'], properties):
-                return edge
-            else:
-                return None
-
         all_edges = self.storage.get_edge_ids()
-        return execute_function_in_parallel(check_property_in_edge, [(edge_id,) for edge_id in all_edges])
+        return execute_function_in_parallel(self.check_property_in_edge,
+                                            [(edge_id, properties) for edge_id in all_edges])
 
+    def find_neighbours(self, node_id: NodeId, hops: int, query_id: int,
+                        node_properties: Dict = None, edge_properties: Dict = None) -> Tuple[List[Node], List[NodeId]]:
+        """
+        Find all neighbours for a node within specified number of hops
+        :param query_id: an id of a request
+        :param hops: a max distance between neighbours
+        :param node_id: an id of the node
+        :param node_properties: a dict containing desirable properties for nodes
+        :param edge_properties: a dict containing desirable properties for edges
+        :return: a list of neighbours, a list of nodes that are not present in this DB
+        """
+        if hops <= 0:
+            return [], []
+        if query_id not in visited_nodes:
+            visited_nodes[query_id] = {}
+
+        visited_nodes[query_id][node_id] = True
+        neighbours = []
+        remote_nodes = []
+        queue = deque([(node_id, hops)])
+
+        while len(queue) > 0:
+            current_node_id, current_hops = queue.pop()
+            if current_hops <= 0:
+                break
+
+            if edge_properties:
+                edges = self.get_edges_from(node_id, properties=edge_properties)
+            else:
+                edges = self.get_edges_from(node_id)
+            for edge in edges:
+                new_node_id = edge['tnid']
+                new_node = edge['to_node']
+                if not new_node:
+                    continue
+                if not visited_nodes[query_id].get(new_node_id, None):
+                    visited_nodes[query_id][new_node_id] = True
+                    if node_properties:
+                        res = self.check_property_in_node(new_node_id, node_properties, new_node)
+                        if not res:
+                            continue
+
+                    if new_node['props'].get('remote_node', None) and new_node['props'].get('remote_node_id', None):
+                        remote_nodes.append(new_node['props']['remote_node_id'])
+                    else:
+                        neighbours.append(new_node)
+                        queue.append((new_node_id, current_hops - 1))
+
+        return neighbours, remote_nodes
