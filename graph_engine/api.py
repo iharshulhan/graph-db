@@ -15,6 +15,16 @@ BAD_REQUEST_CODE = 400
 graph = None
 
 
+@app.route('/ping', methods=['GET'])
+def ping():
+    """
+    Check if worker is alive
+    :return:
+    """
+
+    return flask.make_response('I am alive', SUCCESS_CODE)
+
+
 @app.route('/addNode', methods=['POST'])
 def add_node():
     """
@@ -22,7 +32,7 @@ def add_node():
     :return: a node id
     """
 
-    props = json.loads(flask.request.form.get('props',  type=str, default='{}'))
+    props = json.loads(flask.request.form.get('props', type=str, default='{}'))
 
     if not props:
         return flask.make_response('No data provided', BAD_REQUEST_CODE)
@@ -34,7 +44,7 @@ def add_node():
 def get_node():
     """
     Get a node from DB
-    :return: a node
+    :return: the node
     """
     node_id = flask.request.args.get('node_id', type=int, default=None)
     if not node_id:
@@ -63,13 +73,14 @@ def add_edge():
     :return: an edge id
     """
 
-    props = json.loads(flask.request.form.get('props',  type=str, default='{}'))
+    props = json.loads(flask.request.form.get('props', type=str, default='{}'))
     from_node_id = flask.request.form.get('from_node', type=int, default=None)
     to_node_id = flask.request.form.get('to_node', type=int, default=None)
+    to_node_remote = flask.request.form.get('to_node_remote', type=str, default=None)
 
-    if not (props and from_node_id and to_node_id):
+    if not (props and from_node_id and (to_node_id or to_node_remote)):
         return flask.make_response('Not enough data was provided', BAD_REQUEST_CODE)
-    edge_id = graph.create_edge(from_node_id, to_node_id, props)
+    edge_id = graph.create_edge(from_node_id, props, to_node_id, to_node_remote)
     return flask.make_response(flask.jsonify({'edge_id': edge_id}), SUCCESS_CODE)
 
 
@@ -100,20 +111,22 @@ def delete_edge():
 
 
 @app.route('/getEdgesFrom', methods=['GET'])
-def get_edge_from():
+def get_edges_from():
     """
-    Get all edged from a node
+    Get all edges from a node
     :return: a list of edges
     """
     node_id = flask.request.args.get('node_id', type=int, default=None)
+    props = json.loads(flask.request.args.get('props', type=str, default='{}'))
+
     if not node_id:
         return flask.make_response('Node id was not provided', BAD_REQUEST_CODE)
-    edges = graph.get_edges_from(node_id)
+    edges = graph.get_edges_from(node_id, props)
     return flask.make_response(flask.jsonify({'edges': edges}), SUCCESS_CODE)
 
 
 @app.route('/getEdgesTo', methods=['GET'])
-def get_edge_to():
+def get_edges_to():
     """
     Get all edged to a node
     :return: a list of edges
@@ -132,7 +145,7 @@ def find_nodes():
     :return: a list of nodes
     """
 
-    props = json.loads(flask.request.args.get('props',  type=str, default='{}'))
+    props = json.loads(flask.request.args.get('props', type=str, default='{}'))
 
     nodes = graph.get_nodes_by_properties(props)
     return flask.make_response(flask.jsonify({'nodes': nodes}), SUCCESS_CODE)
@@ -145,7 +158,7 @@ def find_edges():
     :return: a list of edges
     """
 
-    props = json.loads(flask.request.args.get('props',  type=str, default='{}'))
+    props = json.loads(flask.request.args.get('props', type=str, default='{}'))
 
     nodes = graph.get_edges_by_properties(props)
     return flask.make_response(flask.jsonify({'edges': nodes}), SUCCESS_CODE)
@@ -172,8 +185,17 @@ def find_neighbours():
     return flask.make_response(flask.jsonify({'neighbours': neighbours, 'remote_nodes': remote_nodes}), SUCCESS_CODE)
 
 
-if __name__ == '__main__':
-    port = 8080
-    graph_name = 'test'
-    graph = GraphEngine(graph_name)
+def start(port: int, db_name: str):
+    """
+    Start api server
+    :param port: a port for the server
+    :param db_name: a name of a database
+    :return:
+    """
+    global graph
+    graph = GraphEngine(db_name)
     app.run(host='0.0.0.0', port=port, threaded=True)
+
+
+if __name__ == '__main__':
+    start(port=8080, db_name='test')

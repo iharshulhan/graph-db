@@ -1,42 +1,13 @@
 """
 A graph engine layer to work with graph storage
 """
-from multiprocessing.pool import ThreadPool, Pool
-from typing import Dict, List, Optional, Callable, Tuple
+from typing import Dict, List, Optional, Tuple
 from collections import deque
 
 from graph_storage.storage import GraphStorage, NodeId, Node, EdgeId, Edge
+from utils import execute_function_in_parallel
 
 visited_nodes = {}  # array to store history between requests
-
-# number of threads should be bigger than actual number of tasks, elsewhere the pool will not work
-NUM_OF_THREADS = 150
-thread_pool = ThreadPool(NUM_OF_THREADS + 1)
-
-NUM_OF_PROCESSES = 10
-process_pool = Pool(NUM_OF_PROCESSES + 1)
-
-
-def execute_function_in_parallel(func: Callable, list_args: List, processes: bool = False) -> List:
-    """
-    Execute a function in parallel using ThreadPool or ProcessPool
-    :param processes: execute tasks in separate processes
-    :param func: a func to call
-    :param list_args: an array containing calling params
-    :return: an array with results
-    """
-
-    results = []
-    pool = process_pool if processes else thread_pool
-    # ThreadPool works if number of tasks is less than number of threads, so we feed it with batches of tasks
-    for i in range((len(list_args) // NUM_OF_THREADS) + 1):  # +1 to cover a remaining part of integer division
-        results_tmp = [pool.apply_async(func, args=(*args,))
-                       for args in list_args[i * NUM_OF_THREADS: (i + 1) * NUM_OF_THREADS]]
-        for result in results_tmp:
-            res = result.get()
-            if res:
-                results.append(res)
-    return results
 
 
 def check_properties(props: Dict, desirable_props: Dict) -> bool:
@@ -129,11 +100,7 @@ class GraphEngine:
         if not node:
             return node
 
-        node.pop('record_address')
-        node.pop('record_length')
-        node['node_id'] = node_id
-
-        return node
+        return {'node_id': node_id, 'props': node.get('props', None)}
 
     def delete_node(self, node_id: NodeId) -> None:
         """
@@ -171,9 +138,11 @@ class GraphEngine:
         return execute_function_in_parallel(self.check_property_in_node,
                                             [(node_id, properties) for node_id in all_nodes])
 
-    def create_edge(self, from_node: NodeId, to_node: NodeId, properties: Dict) -> Optional[EdgeId]:
+    def create_edge(self, from_node: NodeId, properties: Dict,
+                    to_node: NodeId = None, to_node_remote: str = None) -> Optional[EdgeId]:
         """
         Create a new edge in DB
+        :param to_node_remote: an id of a remote node
         :param to_node: an id of a node where the edge ends
         :param from_node: an id of a node from which the edge starts
         :param properties: a dict containing properties of the edge
@@ -181,14 +150,16 @@ class GraphEngine:
         """
         # Check if nodes exist
         node1 = self.get_node(from_node)
-        node2 = self.get_node(to_node)
+        node2 = None
+        if to_node:
+            node2 = self.get_node(to_node)
 
         if not node1:
             return None
-        elif not node2:
-            to_node = self.create_node({'remote_node_id': to_node, 'remote_node': True})
-
-        return self.storage.create_edge(from_node, to_node, self.storage.create_node({'props': properties}))
+        elif to_node_remote:
+            to_node = self.create_node({'remote_node_id': to_node_remote, 'remote_node': True})
+        if node2 or to_node_remote:
+            return self.storage.create_edge(from_node, to_node, self.storage.create_node({'props': properties}))
 
     def delete_edge(self, edge_id: EdgeId) -> None:
         """
@@ -206,33 +177,47 @@ class GraphEngine:
         :param edge_id: an id of the edge
         :return: the edge
         """
+
         edge = self.storage.get_edge(edge_id)
 
+        edge_dict = {'id': edge_id, 'props': edge.get('props', None), 'tnid': edge['tnid'], 'fnid': edge['fnid']}
         if from_node:
-            edge['from_node'] = self.get_node(edge['fnid'])
+            edge_dict['from_node'] = self.get_node(edge['fnid'])
         if to_node:
-            edge['to_node'] = self.get_node(edge['tnid'])
-        edge['id'] = edge_id
+            edge_dict['to_node'] = self.get_node(edge['tnid'])
 
-        return edge
+        return edge_dict
 
-    def get_edges_from(self, node_id: NodeId, properties: Dict = None) -> List[Edge]:
+    def get_edges_from(self, node_id: NodeId, properties: Dict = None, parallel: bool = False) -> List[Edge]:
         """
         Find all edges from a node
+        :param parallel: execute function in parallel
         :param node_id: an id of the node
         :param properties: a dict containing desirable properties of an edge
         :return: a list of edges
         """
-
         node = self.get_node(node_id)
         if not node:
             return []
         edges_ids = self.storage.edges_from(node_id)
-        if not properties:
-            return execute_function_in_parallel(self.get_edge, [(edges_id, False, True) for edges_id in edges_ids])
+
+        if parallel:
+            if not properties:
+                results = execute_function_in_parallel(self.get_edge,
+                                                       [(edges_id, False, True) for edges_id in edges_ids])
+            else:
+                results = execute_function_in_parallel(self.check_property_in_edge,
+                                                       [(edges_id, properties, False, True) for edges_id in edges_ids])
         else:
-            return execute_function_in_parallel(self.check_property_in_edge,
-                                                [(edges_id, properties, False, True) for edges_id in edges_ids])
+            results = []
+            for edges_id in edges_ids:
+                if not properties:
+                    res = self.get_edge(edges_id, False, True)
+                else:
+                    res = self.check_property_in_edge(edges_id, properties, False, True)
+                if res:
+                    results.append(res)
+        return results
 
     def get_edges_to(self, node_id: NodeId, properties: Dict = None) -> List[Edge]:
         """
@@ -279,7 +264,7 @@ class GraphEngine:
                                             [(edge_id, properties) for edge_id in all_edges])
 
     def find_neighbours(self, node_id: NodeId, hops: int, query_id: int,
-                        node_properties: Dict = None, edge_properties: Dict = None) -> Tuple[List[Node], List[NodeId]]:
+                        node_properties: Dict = None, edge_properties: Dict = None) -> Tuple[List[Node], List[str]]:
         """
         Find all neighbours for a node within specified number of hops
         :param query_id: an id of a request
