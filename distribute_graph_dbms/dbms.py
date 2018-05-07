@@ -295,7 +295,12 @@ class DBMS:
                 print(f'Could not find nodes in worker {worker}. Response: {e}')
                 return []
 
-        return execute_function_in_parallel(find_nodes_in_worker, [(worker,) for worker in self.workers])
+        result = execute_function_in_parallel(find_nodes_in_worker, [(worker,) for worker in self.workers])
+        nodes = []
+        for res in result:
+            if res:
+                nodes.extend(res)
+        return nodes
 
     def find_edges(self, props: Dict = None) -> List[Edge]:
         """
@@ -322,7 +327,13 @@ class DBMS:
                 print(f'Could not find edges in worker {worker}. Response: {e}')
                 return []
 
-        return execute_function_in_parallel(find_edges_in_worker, [(worker,) for worker in self.workers])
+        result = execute_function_in_parallel(find_edges_in_worker, [(worker,) for worker in self.workers])
+
+        edges = []
+        for res in result:
+            if res:
+                edges.extend(res)
+        return edges
 
     def find_neighbours(self, node_id_str: str, hops: int, node_props: Dict = None,
                         edge_props: Dict = None) -> Iterable[Node]:
@@ -364,7 +375,7 @@ class DBMS:
                 response = requests.put(url)
                 response.raise_for_status()
             except Exception as e:
-                print(f'Could clear visited nodes for worker {worker}. Response: {e}')
+                print(f'Could not clear visited nodes for worker {worker}. Response: {e}')
 
         nodes_to_process = [(node_id_str, hops)]
         neighbours = {}
@@ -392,7 +403,9 @@ class DBMS:
 if __name__ == '__main__':
     log = logging.getLogger('werkzeug')
     log.disabled = True
-    # engines = start_engines()
+    engines = start_engines()
     sleep(2)
-    dbms = DBMS(['http://192.168.1.253:8089', 'http://192.168.1.240:8080'])
+    dbms = DBMS(engines)
+
+    # Example of a query
     print(dbms.find_neighbours('http://localhost:8081$2', 10))
