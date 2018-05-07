@@ -3,13 +3,14 @@ A Distributed Graph Database Management System
 """
 import json
 import random
+import string
 from time import sleep
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Iterable
 
 import requests
 
 from distribute_graph_dbms.start_engines import start_engines
-from graph_storage.storage import NodeId, Node, Edge
+from graph_storage.storage import Node, Edge
 from utils import execute_function_in_parallel
 
 SUCCESS_CODE = 200
@@ -196,7 +197,7 @@ class DBMS:
         if response.status_code != SUCCESS_CODE:
             print(f'Could not delete edge from engine {worker}. Response: {response.text}')
 
-    def get_edges_from(self, node_id_str: str, props: Dict = None) -> Optional[Node]:
+    def get_edges_from(self, node_id_str: str, props: Dict = None) -> List[Edge]:
         """
         Find all edges from a node
         :param node_id_str: an id of the node
@@ -208,7 +209,7 @@ class DBMS:
         node_id = split_node_id[1]
 
         if worker not in self.workers:
-            return None
+            return []
 
         url = f'{worker}/getEdgesFrom?node_id={node_id}'
         if props:
@@ -216,7 +217,7 @@ class DBMS:
 
         response = requests.get(url)
         if response.status_code != SUCCESS_CODE:
-            print(f'Could not get node from engine {worker}. Response: {response.text}')
+            print(f'Could not get edges from a node {node_id_str}. Response: {response.text}')
         else:
             edges = response.json().get('edges')
             edges_modified = []
@@ -225,80 +226,143 @@ class DBMS:
                     edges_modified.append(self.change_ids_in_edge(edge, worker))
             return edges_modified
 
+    def get_edges_to(self, node_id_str: str, props: Dict = None) -> List[Edge]:
+        """
+        Find all edges to a node
+        :param node_id_str: an id of the node
+        :param props: a dict containing desirable properties of an edge
+        :return: a list of edges
+        """
+        split_node_id = node_id_str.split('$')
+        worker = split_node_id[0]
+        node_id = split_node_id[1]
 
-    # @app.route('/getEdgesFrom', methods=['GET'])
-    # def get_edge_from():
-    #     """
-    #     Get all edged from a node
-    #     :return: a list of edges
-    #     """
-    #     node_id = flask.request.args.get('node_id', type=int, default=None)
-    #     if not node_id:
-    #         return flask.make_response('Node id was not provided', BAD_REQUEST_CODE)
-    #     edges = graph.get_edges_from(node_id)
-    #     return flask.make_response(flask.jsonify({'edges': edges}), SUCCESS_CODE)
-    #
-    # @app.route('/getEdgesTo', methods=['GET'])
-    # def get_edge_to():
-    #     """
-    #     Get all edged to a node
-    #     :return: a list of edges
-    #     """
-    #     node_id = flask.request.args.get('node_id', type=int, default=None)
-    #     if not node_id:
-    #         return flask.make_response('Node id was not provided', BAD_REQUEST_CODE)
-    #     edges = graph.get_edges_to(node_id)
-    #     return flask.make_response(flask.jsonify({'edges': edges}), SUCCESS_CODE)
-    #
-    # @app.route('/findNodes', methods=['GET'])
-    # def find_nodes():
-    #     """
-    #     Get all nodes matching props
-    #     :return: a list of nodes
-    #     """
-    #
-    #     props = json.loads(flask.request.args.get('props', type=str, default='{}'))
-    #
-    #     nodes = graph.get_nodes_by_properties(props)
-    #     return flask.make_response(flask.jsonify({'nodes': nodes}), SUCCESS_CODE)
-    #
-    # @app.route('/findEdges', methods=['GET'])
-    # def find_edges():
-    #     """
-    #     Get all edges matching props
-    #     :return: a list of edges
-    #     """
-    #
-    #     props = json.loads(flask.request.args.get('props', type=str, default='{}'))
-    #
-    #     nodes = graph.get_edges_by_properties(props)
-    #     return flask.make_response(flask.jsonify({'edges': nodes}), SUCCESS_CODE)
-    #
-    # @app.route('/findNeighbours', methods=['GET'])
-    # def find_neighbours():
-    #     """
-    #     Get all neighbours of a node
-    #     :return: a list of neighbours
-    #     """
-    #
-    #     node_id = flask.request.args.get('node_id', type=int, default=None)
-    #     hops = flask.request.args.get('hops', type=int, default=0)
-    #     query_id = flask.request.args.get('query_id', type=str, default='')
-    #     node_props = json.loads(flask.request.args.get('node_props', type=str, default='{}'))
-    #     edge_props = json.loads(flask.request.args.get('edge_props', type=str, default='{}'))
-    #
-    #     if not node_id:
-    #         return flask.make_response('Node id was not provided', BAD_REQUEST_CODE)
-    #     if not query_id:
-    #         return flask.make_response('Query id was not provided', BAD_REQUEST_CODE)
-    #     neighbours, remote_nodes = graph.find_neighbours(node_id, hops, query_id, node_props, edge_props)
-    #     return flask.make_response(flask.jsonify({'neighbours': neighbours, 'remote_nodes': remote_nodes}),
-    #                                SUCCESS_CODE)
+        if worker not in self.workers:
+            return []
+
+        url = f'{worker}/getEdgesTo?node_id={node_id}'
+        if props:
+            url += f'&props={json.dumps(props)}'
+
+        response = requests.get(url)
+        if response.status_code != SUCCESS_CODE:
+            print(f'Could not get edges to a node {node_id_str}. Response: {response.text}')
+        else:
+            edges = response.json().get('edges')
+            edges_modified = []
+            if edges:
+                for edge in edges:
+                    edges_modified.append(self.change_ids_in_edge(edge, worker))
+            return edges_modified
+
+    def find_nodes(self, props: Dict = None) -> List[Node]:
+        """
+        Find all nodes which have specified properties
+        :param props: a dict containing desirable properties of a node
+        :return: a list of nodes
+        """
+
+        def find_nodes_in_worker(worker):
+            url = f'{worker}/findNodes?props={json.dumps(props)}'
+            response = requests.get(url)
+            if response.status_code != SUCCESS_CODE:
+                print(f'Could not find nodes in worker {worker}. Response: {response.text}')
+            else:
+                nodes = response.json().get('nodes')
+                nodes_modified = []
+                if nodes:
+                    for node in nodes:
+                        if not node:
+                            continue
+                        node['node_id'] = f'{worker}${node["node_id"]}'
+                        nodes_modified.append(node)
+                return nodes_modified
+
+        return execute_function_in_parallel(find_nodes_in_worker, [(worker,) for worker in self.workers])
+
+    def find_edges(self, props: Dict = None) -> List[Edge]:
+        """
+        Find all edges which have specified properties
+        :param props: a dict containing desirable properties of an edge
+        :return: a list of edges
+        """
+
+        def find_edges_in_worker(worker):
+            url = f'{worker}/findEdges?props={json.dumps(props)}'
+            response = requests.get(url)
+            if response.status_code != SUCCESS_CODE:
+                print(f'Could not find edges in worker {worker}. Response: {response.text}')
+            else:
+                edges = response.json().get('edges')
+                edges_modified = []
+                if edges:
+                    for edge in edges:
+                        if not edge:
+                            continue
+                        edges_modified.append(self.change_ids_in_edge(edge, worker))
+                return edges_modified
+
+        return execute_function_in_parallel(find_edges_in_worker, [(worker,) for worker in self.workers])
+
+    def find_neighbours(self, node_id_str: str, hops: int, node_props: Dict = None,
+                        edge_props: Dict = None) -> Iterable[Node]:
+        """
+        Get all neighbours of a node
+        :return: a list of neighbours
+        """
+        query_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+
+        def find_neighbours_in_worker(node_id_str_to_check, hops_left):
+            split_node_id = node_id_str_to_check.split('$')
+            worker = split_node_id[0]
+            node_id = split_node_id[1]
+
+            url = f'{worker}/findNeighbours?node_id={node_id}&hops={hops_left}&query_id={query_id}'
+            if node_props:
+                url += f'&node_props={node_props}'
+            if edge_props:
+                url += f'&edge_props={edge_props}'
+            response = requests.get(url)
+            if response.status_code != SUCCESS_CODE:
+                print(f'Could not find neighbours in {worker}. Response: {response.text}')
+            else:
+                res = response.json()
+                if res['neighbours']:
+                    for neighbour in res['neighbours']:
+                        neighbour['node_id'] = f'{worker}${neighbour["node_id"]}'
+                return res
+
+        def clear_history(worker):
+            url = f'{worker}/clearVisitedNodes?query_id={query_id}'
+            response = requests.put(url)
+            if response.status_code != SUCCESS_CODE:
+                print(f'Could clear visited nodes for worker {worker}. Response: {response.text}')
+
+        nodes_to_process = [(node_id_str, hops)]
+        neighbours = {}
+        while len(nodes_to_process) > 0:
+            results = execute_function_in_parallel(find_neighbours_in_worker, [
+                (node_id, hops_left) for node_id, hops_left in nodes_to_process])
+            nodes_to_process = []
+            for result in results:
+                new_neighbours = result['neighbours']
+                if new_neighbours:
+                    for new_neighbour in new_neighbours:
+                        neighbours[new_neighbour['node_id']] = new_neighbour
+                remote_nodes = result['remote_nodes']
+                if remote_nodes:
+                    for remote_node, hops_left in remote_nodes:
+                        if remote_node not in neighbours:
+                            neighbours[remote_node] = self.get_node(remote_node)
+                            nodes_to_process.append((remote_node, hops_left))
+
+        execute_function_in_parallel(clear_history, [(worker,) for worker in self.workers])
+
+        return neighbours.values()
 
 
 if __name__ == '__main__':
     engines = start_engines()
     sleep(2)
     dbms = DBMS(engines)
-    print(dbms.get_edges_from('http://localhost:8081$2'))
-    print(dbms.get_edges_from('http://localhost:8081$2', {'negative_props': ['loh2']}))
+    print(dbms.find_neighbours('http://localhost:8081$2', 10))

@@ -6,7 +6,7 @@ import json
 import flask
 from flask import Flask
 
-from graph_engine.engine import GraphEngine
+from graph_engine.engine import GraphEngine, clear_visited_nodes
 
 app = Flask(__name__)
 
@@ -132,9 +132,11 @@ def get_edges_to():
     :return: a list of edges
     """
     node_id = flask.request.args.get('node_id', type=int, default=None)
+    props = json.loads(flask.request.args.get('props', type=str, default='{}'))
+
     if not node_id:
         return flask.make_response('Node id was not provided', BAD_REQUEST_CODE)
-    edges = graph.get_edges_to(node_id)
+    edges = graph.get_edges_to(node_id, props)
     return flask.make_response(flask.jsonify({'edges': edges}), SUCCESS_CODE)
 
 
@@ -183,6 +185,20 @@ def find_neighbours():
         return flask.make_response('Query id was not provided', BAD_REQUEST_CODE)
     neighbours, remote_nodes = graph.find_neighbours(node_id, hops, query_id, node_props, edge_props)
     return flask.make_response(flask.jsonify({'neighbours': neighbours, 'remote_nodes': remote_nodes}), SUCCESS_CODE)
+
+
+@app.route('/clearVisitedNodes', methods=['PUT'])
+def clear_history():
+    """
+    Clear visited node for given query id
+    :return: None
+    """
+    query_id = flask.request.args.get('query_id', type=str, default='')
+
+    if not query_id:
+        return flask.make_response('Query id was not provided', BAD_REQUEST_CODE)
+    clear_visited_nodes(query_id)
+    return flask.make_response(flask.jsonify('Success'), SUCCESS_CODE)
 
 
 def start(port: int, db_name: str):

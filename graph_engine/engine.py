@@ -19,6 +19,10 @@ def check_properties(props: Dict, desirable_props: Dict) -> bool:
     """
     if not props:
         return False
+
+    if not desirable_props:
+        return True
+
     for key, value in desirable_props.items():
         if key == 'negative_props':
             if not isinstance(value, List):
@@ -127,16 +131,25 @@ class GraphEngine:
         else:
             return None
 
-    def get_nodes_by_properties(self, properties: Dict) -> List[Node]:
+    def get_nodes_by_properties(self, properties: Dict, parallel: bool = False) -> List[Node]:
         """
         Find all nodes which have specified properties
-        :param properties: a dict containing desirable properties of the node
+        :param parallel: execute function in parallel
+        :param properties: a dict containing desirable properties of a node
         :return: a list of nodes
         """
 
         all_nodes = self.storage.get_node_ids()
-        return execute_function_in_parallel(self.check_property_in_node,
-                                            [(node_id, properties) for node_id in all_nodes])
+        if parallel:
+            return execute_function_in_parallel(self.check_property_in_node,
+                                                [(node_id, properties) for node_id in all_nodes])
+        else:
+            nodes = []
+            for node_id in all_nodes:
+                res = self.check_property_in_node(node_id, properties)
+                if res:
+                    nodes.append(res)
+            return nodes
 
     def create_edge(self, from_node: NodeId, properties: Dict,
                     to_node: NodeId = None, to_node_remote: str = None) -> Optional[EdgeId]:
@@ -219,9 +232,10 @@ class GraphEngine:
                     results.append(res)
         return results
 
-    def get_edges_to(self, node_id: NodeId, properties: Dict = None) -> List[Edge]:
+    def get_edges_to(self, node_id: NodeId, properties: Dict = None, parallel: bool = False) -> List[Edge]:
         """
         Find all edges to a node
+        :param parallel: execute function in parallel
         :param node_id: an id of the node
         :param properties: a dict containing desirable properties of an edge
         :return: a list of edges
@@ -231,11 +245,23 @@ class GraphEngine:
         if not node:
             return []
         edges_ids = self.storage.edges_to(node_id)
-        if not properties:
-            return execute_function_in_parallel(self.get_edge, [(edges_id, False, True) for edges_id in edges_ids])
+        if parallel:
+            if not properties:
+                results = execute_function_in_parallel(self.get_edge,
+                                                       [(edges_id, False, True) for edges_id in edges_ids])
+            else:
+                results = execute_function_in_parallel(self.check_property_in_edge,
+                                                       [(edges_id, properties, False, True) for edges_id in edges_ids])
         else:
-            return execute_function_in_parallel(self.check_property_in_edge,
-                                                [(edges_id, properties, False, True) for edges_id in edges_ids])
+            results = []
+            for edges_id in edges_ids:
+                if not properties:
+                    res = self.get_edge(edges_id, False, True)
+                else:
+                    res = self.check_property_in_edge(edges_id, properties, False, True)
+                if res:
+                    results.append(res)
+        return results
 
     def check_property_in_edge(self, edge_id: int, properties: Dict,
                                from_node: bool = False, to_node: bool = False) -> Optional[Edge]:
@@ -253,18 +279,29 @@ class GraphEngine:
         else:
             return None
 
-    def get_edges_by_properties(self, properties: Dict) -> List[Edge]:
+    def get_edges_by_properties(self, properties: Dict, parallel: bool = False) -> List[Edge]:
         """
         Find all edges which have specified properties
+        :param parallel: execute function in parallel
         :param properties: a dict containing desirable properties of an edge
         :return: a list of edges
         """
         all_edges = self.storage.get_edge_ids()
-        return execute_function_in_parallel(self.check_property_in_edge,
-                                            [(edge_id, properties) for edge_id in all_edges])
+        if parallel:
+            return execute_function_in_parallel(self.check_property_in_edge,
+                                                [(edge_id, properties) for edge_id in all_edges])
+
+        else:
+            edges = []
+            for edge_id in all_edges:
+                res = self.check_property_in_edge(edge_id, properties)
+                if res:
+                    edges.append(res)
+            return edges
 
     def find_neighbours(self, node_id: NodeId, hops: int, query_id: int,
-                        node_properties: Dict = None, edge_properties: Dict = None) -> Tuple[List[Node], List[str]]:
+                        node_properties: Dict = None,
+                        edge_properties: Dict = None) -> Tuple[List[Node], List[Tuple[str, int]]]:
         """
         Find all neighbours for a node within specified number of hops
         :param query_id: an id of a request
@@ -306,7 +343,7 @@ class GraphEngine:
                             continue
 
                     if new_node['props'].get('remote_node', None) and new_node['props'].get('remote_node_id', None):
-                        remote_nodes.append(new_node['props']['remote_node_id'])
+                        remote_nodes.append((new_node['props']['remote_node_id'], current_hops - 1))
                     else:
                         neighbours.append(new_node)
                         queue.append((new_node_id, current_hops - 1))
