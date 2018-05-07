@@ -353,9 +353,9 @@ class DBMS:
 
             url = f'{worker}/findNeighbours?node_id={node_id}&hops={hops_left}&query_id={query_id}'
             if node_props:
-                url += f'&node_props={node_props}'
+                url += f'&node_props={json.dumps(node_props)}'
             if edge_props:
-                url += f'&edge_props={edge_props}'
+                url += f'&edge_props={json.dumps(edge_props)}'
             try:
                 response = requests.get(url)
                 response.raise_for_status()
