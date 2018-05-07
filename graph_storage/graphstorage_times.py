@@ -3,7 +3,7 @@ import cProfile
 
 from graph_storage.storage import GraphStorage
 
-NODES = 1000
+NODES = 10000
 
 
 def put():

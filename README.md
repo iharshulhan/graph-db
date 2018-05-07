@@ -96,7 +96,7 @@ is a sequence of blocks. Block represents one node and has this structure:
 
 Size/Type | Short Name  | Description
 ----------|-------------|------------
-`UINT`    | `addr`      | Pointer to the property block in PROPERTIES file
+`UINT`    | `addr`      | Pointer to the property block in PROPERTIES file or 0 if this node is deleted
 `UINT`    | `edge_from` | First edge from node 
 `UINT`    | `edge_to`   | First edge to node
 
@@ -110,12 +110,12 @@ is a sequence of `edge` blocks. `edge` blocks have this structure:
 
 Size/Type | Short Name  | Description
 ----------|-------------|------------
-`UINT`    | `from_nid`  | Edge source node ID
+`UINT`    | `from_nid`  | Edge source node ID or 0 if this edge is deleted
 `UINT`    | `to_nid`    | Edge destination node ID
-`UINT`    | `prev_1`    | Previous relationship ID for the start node
-`UINT`    | `next_1`    | Next relationship ID for the start node
-`UINT`    | `prev_2`    | Previous relationship ID for the end node
-`UINT`    | `next_2`    | Next relationship ID for the end node
+`UINT`    | `prev_1`    | Previous edge ID for the start node
+`UINT`    | `next_1`    | Next edge ID for the start node
+`UINT`    | `prev_2`    | Previous edge ID for the end node
+`UINT`    | `next_2`    | Next edge ID for the end node
 `UINT`    | `props_addr`| Pointer to property block in PROPERTIES file
 
 
