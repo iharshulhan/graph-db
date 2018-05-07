@@ -90,7 +90,7 @@ Type    | Size (Bytes) | Description
 --------|--------------|----------------------------------------------------------
 `BOOL`  | 1            | True/False boolean value. 0 for False, else True
 `INT`   | 4            | Signed integer number
-`UINT`  | 4            | Unsigned integer number (not available for user?)
+`UINT`  | 4            | Unsigned integer number (not available for user)
 `FLOAT` | 4            | Single precision floating point number
 `TEXT`  | Varying      | Sequence of `CHAR`s long as needed. Like SQL `VARCHAR`
 
@@ -99,10 +99,6 @@ edge attributes are stored. Thus, an edge is a `from_node_id`, `to_node_id`,
 `props_node_id` triple.
 
 ### Program
-
-Nodes and Edges should be compared by ids (maybe redefine `__eq__` and `__ne__` in future).
-Even better if we use operator `is` (how?).
-
 Nodes are dictionaries:
 ```
 n = {
@@ -140,7 +136,7 @@ Then there is a sequence of `node` blocks. `node` blocks have this structure:
 Size/Type | Short name   | Description
 ----------|--------------|------------
 `UINT`    | `rec_len`    | Record length in bytes
-`UINT`    | `num_props`  | How many properties are stored in this node?
+`UINT`    | `num_props`  | How many properties are stored in this node
 Depends on `num_props` | `props`      | Sequence of `prop` blocks
 
 `prop` blocks have this structure:
@@ -192,22 +188,3 @@ Size/Type | Short Name  | Description
 `UINT`    | `prev_2`    | Previous edge ID for the end node
 `UINT`    | `next_2`    | Next edge ID for the end node
 `UINT`    | `props_addr`| Pointer to property block in PROPERTIES file
-
-
-
-##### Implementation details
-Nodes can be created, updated, deleted.
-
-Update operations return possibly a different `id`.
-
-Function                               | Returns | Description
----------------------------------------|---------|-----------------------------------
-`create_node(n)`                       | `nid`   | Save node to disk and return it's id
-`update_node(nid, n)`                  | `nid2`  | Write new data for node `nid`. `nid2` is the new id for node `nid`
-`get_node(nid)`                        | `n`     | Find node by id
-`delete_node(nid)`                     | Nothing | Delete node `nid`
-`create_edge(from_nid, to_nid, edge_nid)` | `eid`   | Save edge and return it's id
-`remove_edge(eid)`                     | Nothing | Delete edge by edge id
-`all_node_ids()`                       | `[nid]` | List of all node ids
-`edges_from(nid)`                      | `[eid]` | List of all edge ids from node
-`edges_to(nid)`                        | `[eid]` | List of all edge ids to node

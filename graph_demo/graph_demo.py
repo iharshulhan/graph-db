@@ -3,9 +3,11 @@ Social circles: Facebook graph demo dataset
 
 https://snap.stanford.edu/data/egonets-Facebook.html
 """
-import glob
 import re
 from distribute_graph_dbms.dbms import DBMS
+from distribute_graph_dbms.start_engines import start_engines
+from time import sleep
+import logging
 
 
 def load_social_circles_facebook(dbms: DBMS) -> None:
@@ -106,7 +108,6 @@ def load_social_circles_facebook(dbms: DBMS) -> None:
     # make regular edges
     for u in edges:
         unid = node_id_mapping[u]
-        params = []
         for v in edges[u]:
             tot_edges += 1
             if tot_edges % 1000 == 0:
@@ -116,9 +117,6 @@ def load_social_circles_facebook(dbms: DBMS) -> None:
     print('Loaded!')
 
 
-from distribute_graph_dbms.start_engines import start_engines
-from time import sleep
-import logging
 if __name__ == '__main__':
     log = logging.getLogger('werkzeug')
     log.disabled = True
