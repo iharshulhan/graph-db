@@ -50,12 +50,13 @@ class DBMS:
             worker_id = random.randrange(start=0, stop=len(self.workers) - 1, step=1)
             url = f'{self.workers[worker_id]}/addNode'
 
-            response = requests.post(url, data={'props': json.dumps(props)})
-            if response.status_code != SUCCESS_CODE:
-                print(f'Could not add node to engine {self.workers[worker_id]}. Response: {response.text}')
-            else:
+            try:
+                response = requests.post(url, data={'props': json.dumps(props)})
+                response.raise_for_status()
                 node_id = response.json().get('node_id')
                 return f'{self.workers[worker_id]}${node_id}'
+            except Exception as e:
+                print(f'Could not add node to engine {self.workers[worker_id]}. Response: {e}')
 
     def get_node(self, node_id_str: str) -> Optional[Node]:
         """
@@ -71,16 +72,16 @@ class DBMS:
             return None
 
         url = f'{worker}/getNode?node_id={node_id}'
-
-        response = requests.get(url)
-        if response.status_code != SUCCESS_CODE:
-            print(f'Could not get node from engine {worker}. Response: {response.text}')
-        else:
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
             node = response.json().get('node')
             if not node:
                 return node
             node['node_id'] = f'{worker}${node["node_id"]}'
             return node
+        except Exception as e:
+            print(f'Could not get node from engine {worker}. Response: {e}')
 
     def delete_node(self, node_id_str: str) -> None:
         """
@@ -97,9 +98,11 @@ class DBMS:
 
         url = f'{worker}/deleteNode?node_id={node_id}'
 
-        response = requests.delete(url)
-        if response.status_code != SUCCESS_CODE:
-            print(f'Could not delete node from engine {worker}. Response: {response.text}')
+        try:
+            response = requests.delete(url)
+            response.raise_for_status()
+        except Exception as e:
+            print(f'Could not delete node from engine {worker}. Response: {e}')
 
     def add_edge(self, from_node_id_str: str, to_node_id_str: str, props: Dict) -> str:
         """
@@ -127,12 +130,14 @@ class DBMS:
         else:
             data['to_node_remote'] = to_node_id_str
 
-        response = requests.post(url, data=data)
-        if response.status_code != SUCCESS_CODE:
-            print(f'Could not add edge to engine {from_worker}. Response: {response.text}')
-        else:
+        try:
+            response = requests.post(url, data=data)
+            response.raise_for_status()
             edge_id = response.json().get('edge_id')
             return f'{from_worker}${edge_id}'
+        except Exception as e:
+            print(f'Could not add edge to engine {from_worker}. Response: {e}')
+            return ''
 
     def change_ids_in_edge(self, edge: Edge, worker: str):
         """
@@ -169,15 +174,17 @@ class DBMS:
 
         url = f'{worker}/getEdge?edge_id={edge_id}'
 
-        response = requests.get(url)
-        if response.status_code != SUCCESS_CODE:
-            print(f'Could not get edge from engine {worker}. Response: {response.text}')
-        else:
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+
             edge = response.json().get('edge')
             if not edge:
                 return None
 
             return self.change_ids_in_edge(edge, worker)
+        except Exception as e:
+            print(f'Could not get edge from engine {worker}. Response: {e}')
 
     def delete_edge(self, edge_id_str: str) -> None:
         """
@@ -193,10 +200,11 @@ class DBMS:
             return None
 
         url = f'{worker}/deleteEdge?edge_id={edge_id}'
-
-        response = requests.delete(url)
-        if response.status_code != SUCCESS_CODE:
-            print(f'Could not delete edge from engine {worker}. Response: {response.text}')
+        try:
+            response = requests.delete(url)
+            response.raise_for_status()
+        except Exception as e:
+            print(f'Could not delete edge from engine {worker}. Response: {e}')
 
     def get_edges_from(self, node_id_str: str, props: Dict = None) -> List[Edge]:
         """
@@ -215,17 +223,20 @@ class DBMS:
         url = f'{worker}/getEdgesFrom?node_id={node_id}'
         if props:
             url += f'&props={json.dumps(props)}'
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
 
-        response = requests.get(url)
-        if response.status_code != SUCCESS_CODE:
-            print(f'Could not get edges from a node {node_id_str}. Response: {response.text}')
-        else:
             edges = response.json().get('edges')
             edges_modified = []
             if edges:
                 for edge in edges:
                     edges_modified.append(self.change_ids_in_edge(edge, worker))
             return edges_modified
+
+        except Exception as e:
+            print(f'Could not get edges from a node {node_id_str}. Response: {e}')
+            return []
 
     def get_edges_to(self, node_id_str: str, props: Dict = None) -> List[Edge]:
         """
@@ -244,17 +255,19 @@ class DBMS:
         url = f'{worker}/getEdgesTo?node_id={node_id}'
         if props:
             url += f'&props={json.dumps(props)}'
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
 
-        response = requests.get(url)
-        if response.status_code != SUCCESS_CODE:
-            print(f'Could not get edges to a node {node_id_str}. Response: {response.text}')
-        else:
             edges = response.json().get('edges')
             edges_modified = []
             if edges:
                 for edge in edges:
                     edges_modified.append(self.change_ids_in_edge(edge, worker))
             return edges_modified
+        except Exception as e:
+            print(f'Could not get edges to a node {node_id_str}. Response: {e}')
+            return []
 
     def find_nodes(self, props: Dict = None) -> List[Node]:
         """
@@ -265,10 +278,10 @@ class DBMS:
 
         def find_nodes_in_worker(worker):
             url = f'{worker}/findNodes?props={json.dumps(props)}'
-            response = requests.get(url)
-            if response.status_code != SUCCESS_CODE:
-                print(f'Could not find nodes in worker {worker}. Response: {response.text}')
-            else:
+            try:
+                response = requests.get(url)
+                response.raise_for_status()
+
                 nodes = response.json().get('nodes')
                 nodes_modified = []
                 if nodes:
@@ -278,6 +291,9 @@ class DBMS:
                         node['node_id'] = f'{worker}${node["node_id"]}'
                         nodes_modified.append(node)
                 return nodes_modified
+            except Exception as e:
+                print(f'Could not find nodes in worker {worker}. Response: {e}')
+                return []
 
         return execute_function_in_parallel(find_nodes_in_worker, [(worker,) for worker in self.workers])
 
@@ -290,10 +306,10 @@ class DBMS:
 
         def find_edges_in_worker(worker):
             url = f'{worker}/findEdges?props={json.dumps(props)}'
-            response = requests.get(url)
-            if response.status_code != SUCCESS_CODE:
-                print(f'Could not find edges in worker {worker}. Response: {response.text}')
-            else:
+            try:
+                response = requests.get(url)
+                response.raise_for_status()
+
                 edges = response.json().get('edges')
                 edges_modified = []
                 if edges:
@@ -302,6 +318,9 @@ class DBMS:
                             continue
                         edges_modified.append(self.change_ids_in_edge(edge, worker))
                 return edges_modified
+            except Exception as e:
+                print(f'Could not find edges in worker {worker}. Response: {e}')
+                return []
 
         return execute_function_in_parallel(find_edges_in_worker, [(worker,) for worker in self.workers])
 
@@ -318,26 +337,34 @@ class DBMS:
             worker = split_node_id[0]
             node_id = split_node_id[1]
 
+            if worker not in self.workers:
+                return None
+
             url = f'{worker}/findNeighbours?node_id={node_id}&hops={hops_left}&query_id={query_id}'
             if node_props:
                 url += f'&node_props={node_props}'
             if edge_props:
                 url += f'&edge_props={edge_props}'
-            response = requests.get(url)
-            if response.status_code != SUCCESS_CODE:
-                print(f'Could not find neighbours in {worker}. Response: {response.text}')
-            else:
+            try:
+                response = requests.get(url)
+                response.raise_for_status()
+
                 res = response.json()
                 if res['neighbours']:
                     for neighbour in res['neighbours']:
                         neighbour['node_id'] = f'{worker}${neighbour["node_id"]}'
                 return res
+            except Exception as e:
+                print(f'Could not find neighbours in {worker}. Response: {e}')
+                return None
 
         def clear_history(worker):
             url = f'{worker}/clearVisitedNodes?query_id={query_id}'
-            response = requests.put(url)
-            if response.status_code != SUCCESS_CODE:
-                print(f'Could clear visited nodes for worker {worker}. Response: {response.text}')
+            try:
+                response = requests.put(url)
+                response.raise_for_status()
+            except Exception as e:
+                print(f'Could clear visited nodes for worker {worker}. Response: {e}')
 
         nodes_to_process = [(node_id_str, hops)]
         neighbours = {}
@@ -365,7 +392,7 @@ class DBMS:
 if __name__ == '__main__':
     log = logging.getLogger('werkzeug')
     log.disabled = True
-    engines = start_engines()
+    # engines = start_engines()
     sleep(2)
-    dbms = DBMS(engines)
+    dbms = DBMS(['http://192.168.1.253:8089', 'http://192.168.1.240:8080'])
     print(dbms.find_neighbours('http://localhost:8081$2', 10))
