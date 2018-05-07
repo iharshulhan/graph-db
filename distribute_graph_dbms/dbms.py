@@ -7,6 +7,7 @@ import string
 from time import sleep
 from typing import List, Dict, Optional, Iterable
 
+import logging
 import requests
 
 from distribute_graph_dbms.start_engines import start_engines
@@ -362,6 +363,8 @@ class DBMS:
 
 
 if __name__ == '__main__':
+    log = logging.getLogger('werkzeug')
+    log.disabled = True
     engines = start_engines()
     sleep(2)
     dbms = DBMS(engines)
