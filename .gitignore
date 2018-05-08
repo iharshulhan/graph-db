@@ -104,3 +104,4 @@ ENV/
 *.node_ids
 *.properties
 .idea/
+.DS_store
