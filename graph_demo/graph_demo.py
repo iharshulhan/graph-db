@@ -124,7 +124,6 @@ if __name__ == '__main__':
     sleep(2)
     dbms = DBMS(engines)
     load_social_circles_facebook(dbms)
-    exit(0)
 
     zero_node = dbms.find_nodes({'equal_props': {'fb_id': '0'}})[0]
     print('zero_node', zero_node)
