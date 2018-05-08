@@ -76,6 +76,10 @@ def load_social_circles_facebook(dbms: DBMS) -> None:
                     edges[v] = {}
                 edges[u][v] = True
                 edges[v][u] = True
+                edges[ego_id][u] = True
+                edges[u][ego_id] = True
+                edges[ego_id][v] = True
+                edges[v][ego_id] = True
 
     # Put data to graph
     node_id_mapping = {}
