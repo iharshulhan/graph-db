@@ -1,6 +1,6 @@
 import unittest
 
-from src.graphstorage import GraphStorage, Node, NodeId
+from graph_storage.storage import GraphStorage, Node, NodeId
 
 
 class GraphStorageTest(unittest.TestCase):
@@ -26,6 +26,7 @@ class GraphStorageTest(unittest.TestCase):
         nid = self.storage.create_node(node)
         node2 = self.storage.get_node(nid)
         self.assertEqual(node['props'], node2['props'])
+        self.assertIn(nid, self.storage.get_node_ids())
 
     def test_edge_creation_and_getting(self):
         node = Node({
@@ -61,6 +62,7 @@ class GraphStorageTest(unittest.TestCase):
         self.assertEqual(nid, edge['fnid'])
         self.assertEqual(other_nid, edge['tnid'])
         self.assertEqual(edge_props['props'], edge['props'])
+        self.assertIn(edge_id, self.storage.get_edge_ids())
 
     def test_deleting_edge(self):
         node = Node({
@@ -98,9 +100,11 @@ class GraphStorageTest(unittest.TestCase):
         edge_2 = self.storage.create_edge(nid, other_nid, edge_nid)
         edge_nid = self.storage.create_node(edge_props_3)
         edge_3 = self.storage.create_edge(nid, other_nid, edge_nid)
-        self.assertEqual(len(self.storage.edges_from(nid)), 3)
+        self.assertIn(edge_2, list(self.storage.get_edge_ids()))
+        self.assertEqual(len(list(self.storage.edges_from(nid))), 3)
         self.storage.remove_edge(edge_2)
-        self.assertEqual(len(self.storage.edges_from(nid)), 2)
+        self.assertEqual(len(list(self.storage.edges_from(nid))), 2)
+        self.assertNotIn(edge_2, list(self.storage.get_edge_ids()))
 
     def test_node_none_on_non_existent_nid(self):
         self.assertIsNone(self.storage.get_node(NodeId(123)),
@@ -162,6 +166,30 @@ class GraphStorageTest(unittest.TestCase):
         self.storage.delete_node(nid)
         from_storage_after = self.storage.get_node(nid)
         self.assertIsNone(from_storage_after)
+
+    def test_loop_edge(self):
+        node = Node({
+            'props': {}
+        })
+        nid1 = self.storage.create_node(node)
+        nid2 = self.storage.create_node(node)
+        edge_props = self.storage.create_node(node)
+        eid1 = self.storage.create_edge(nid1, nid1, edge_props)
+        eid2 = self.storage.create_edge(nid2, nid1, edge_props)
+
+        to_nid1 = list(self.storage.edges_to(nid1))
+        from_nid1 = list(self.storage.edges_from(nid1))
+        self.assertIn(eid1, to_nid1)
+        self.assertIn(eid1, from_nid1)
+        self.assertIn(eid2, to_nid1)
+        self.assertNotIn(eid2, from_nid1)
+
+        self.storage.remove_edge(eid1)
+        to_nid1 = list(self.storage.edges_to(nid1))
+        from_nid1 = list(self.storage.edges_from(nid1))
+        self.assertNotIn(eid1, to_nid1)
+        self.assertNotIn(eid1, from_nid1)
+        self.assertIn(eid2, to_nid1)
 
 
 if __name__ == '__main__':
