@@ -127,15 +127,17 @@ if __name__ == '__main__':
 
     zero_node = dbms.find_nodes({'equal_props': {'fb_id': '0'}})[0]
     print('zero_node', zero_node)
+    print(zero_node['node_id'], {'equal_props': {'label': 'user'}})
     three_friends = dbms.find_neighbours(zero_node['node_id'], 3, {'equal_props': {'label': 'user'}})
-    for friend in three_friends:
+    for friend in list(three_friends)[:10]:
         print('My three-friend', friend['props']['fb_id'])
     other_gender = dbms.find_nodes({
         'not_equal_props': {'gender': zero_node['props']['gender']},
         'equal_props': {'label': 'user'}
     })
+    print()
     print('My gender is', zero_node['props']['gender'])
-    for other in other_gender:
+    for other in other_gender[:10]:
         print('But', other['props']['fb_id'], 'has other gender', other['props']['gender'])
     print('End :-)')
 
