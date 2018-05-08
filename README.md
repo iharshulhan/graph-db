@@ -34,7 +34,6 @@ with distributed database:
 ```
 $ python3 graph_demo/graph_demo.py
 ```
-For better results, delete files after every start or comment out DB fillling in demo.
 
 ### Usage
 In order to manage a database users can use GraphEngine class directly without REST-API. This is the fastest way. However,
