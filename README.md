@@ -1,15 +1,20 @@
 # graph-db
 Implementation of Graph DB engine
 
-## Installing and using
+## Installation
 ### Dependencies
-Python 3, Flask
+Python 3, Flask.
+
+Pipfile is included. If using Pipenv, installing dependencies can be done by:
+```
+$ pipenv install
+```
 
 ### Running
 Graph-db can be used on different levels: simple file data storage, single server API, distributed API.
 
 Simple data storage can be used through a class `GraphStorage`. For examples see
-or run `graph_storage/graph_storage_test.py` or `graph_storage/graph_storage_times.py`. To run tests
+or run `graph_storage/graph_storage_test.py` or `graph_storage/graph_storage_times.py`. To run tests:
 ```
 $ python3 graph_storage/graph_storage_tests.py
 ```
@@ -24,7 +29,8 @@ To run a distributed graph DBMS:
 $ python3 distribute_graph_dbms/dbms.py
 ```
 
-There is also a prepared demo on a sample dataset with distributed database:
+There is also a prepared demo on a sample [dataset](https://snap.stanford.edu/data/egonets-Facebook.html)
+with distributed database:
 ```
 $ python3 graph_demo/graph_demo.py
 ```
