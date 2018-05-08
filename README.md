@@ -16,23 +16,23 @@ Graph-db can be used on different levels: simple file data storage, single serve
 Simple data storage can be used through a class `GraphStorage`. For examples see
 or run `graph_storage/graph_storage_test.py` or `graph_storage/graph_storage_times.py`. To run tests:
 ```
-$ python3 graph_storage/graph_storage_tests.py
+$ python3 -m graph_storage.graphstorage_test
 ```
 
 To run a single server Flask API process:
 ```
-$ python3 graph_engine/api.py
+$ python3 -m graph_engine.api
 ```
 
 To run a distributed graph DBMS:
 ```
-$ python3 distribute_graph_dbms/dbms.py
+$ python3 -m distribute_graph_dbms.dbms
 ```
 
 There is also a prepared demo on a sample [dataset](https://snap.stanford.edu/data/egonets-Facebook.html)
 with distributed database:
 ```
-$ python3 graph_demo/graph_demo.py
+$ python3 -m graph_demo.graph_demo
 ```
 
 ### Usage

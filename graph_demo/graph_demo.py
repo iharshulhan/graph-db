@@ -8,11 +8,15 @@ from distribute_graph_dbms.dbms import DBMS
 from distribute_graph_dbms.start_engines import start_engines
 from time import sleep
 import logging
+import os
 
 
 def load_social_circles_facebook(dbms: DBMS) -> None:
+    def progress():
+        print('.', end='', flush=True)
+
     ego_ids = ['0', '107', '348', '414', '686', '698', '1684', '1912', '3437', '3980']
-    prefix = 'dataset/'
+    prefix = os.path.join(os.path.dirname(__file__), 'dataset/')
     circles_suffix = '.circles'
     edges_suffix = '.edges'
     egofeat_suffix = '.egofeat'
@@ -23,8 +27,6 @@ def load_social_circles_facebook(dbms: DBMS) -> None:
     edges = {}
     circles = {}
     for ego_id in ego_ids[:1]:
-        print('Parsing ego id', ego_id)
-
         circles_filename = prefix + ego_id + circles_suffix
         edges_filename = prefix + ego_id + edges_suffix
         egofeat_filename = prefix + ego_id + egofeat_suffix
@@ -74,26 +76,24 @@ def load_social_circles_facebook(dbms: DBMS) -> None:
                     edges[v] = {}
                 edges[u][v] = True
                 edges[v][u] = True
-                edges[ego_id][u] = True
-                edges[u][ego_id] = True
-                edges[ego_id][v] = True
-                edges[v][ego_id] = True
 
     # Put data to graph
     node_id_mapping = {}
-    print(len(circles), 'nodes')
+    tot_nodes = 0
+    tot_nodes += len(circles)
     # make circle nodes
     for circle_name in circles:
         props = {'label': 'circle', 'name': circle_name}
         node_id_mapping[circle_name] = dbms.add_node(props)
+    progress()
     # make user nodes
-    print(len(node_props), 'nodes')
+    tot_nodes += len(node_props)
     for fb_id in node_props:
         props = node_props[fb_id]
         props['label'] = 'user'
         props['fb_id'] = fb_id
         node_id_mapping[fb_id] = dbms.add_node(props)
-    print('EGO NODE IS', node_id_mapping[ego_id])
+    progress()
     # make circle edges
     tot_edges = 0
     for circle_name in circles:
@@ -102,19 +102,19 @@ def load_social_circles_facebook(dbms: DBMS) -> None:
         for nid in ids:
             tot_edges += 1
             unid = node_id_mapping[nid]
-            print('CIRCLE EDGE', unid, cnid)
             dbms.add_edge(unid, cnid, {})
-    print(tot_edges, 'already done edges')
+    progress()
     # make regular edges
     for u in edges:
         unid = node_id_mapping[u]
         for v in edges[u]:
             tot_edges += 1
             if tot_edges % 1000 == 0:
-                print(tot_edges, 'edges already added')
+                progress()
             vnid = node_id_mapping[v]
             dbms.add_edge(unid, vnid, {})
-    print('Loaded!')
+    print()
+    print('Loaded! Total', tot_nodes, 'nodes,', tot_edges, 'edges')
 
 
 if __name__ == '__main__':
@@ -129,6 +129,7 @@ if __name__ == '__main__':
     print('zero_node', zero_node)
     print(zero_node['node_id'], {'equal_props': {'label': 'user'}})
     three_friends = dbms.find_neighbours(zero_node['node_id'], 3, {'equal_props': {'label': 'user'}})
+    print('10 of three-friends')
     for friend in list(three_friends)[:10]:
         print('My three-friend', friend['props']['fb_id'])
     other_gender = dbms.find_nodes({
@@ -137,10 +138,7 @@ if __name__ == '__main__':
     })
     print()
     print('My gender is', zero_node['props']['gender'])
+    print('10 of other genders:')
     for other in other_gender[:10]:
-        print('But', other['props']['fb_id'], 'has other gender', other['props']['gender'])
+        print(other['props']['fb_id'], 'has other gender', other['props']['gender'])
     print('End :-)')
-
-
-
-
